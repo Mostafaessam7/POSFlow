@@ -79,19 +79,196 @@ public static class DatabaseSeeder
             dbContext.Users.Add(admin);
         }
 
+        var hasCategories = await dbContext.ProductCategories.AnyAsync();
+        ProductCategory? drinksCategory = null;
+        ProductCategory? foodCategory = null;
+
+        if (!hasCategories)
+        {
+            drinksCategory = new ProductCategory { TenantId = tenant.Id, NameAr = "مشروبات", NameEn = "Drinks" };
+            foodCategory = new ProductCategory { TenantId = tenant.Id, NameAr = "مأكولات", NameEn = "Food" };
+
+            dbContext.ProductCategories.AddRange(drinksCategory, foodCategory);
+        }
+
         var hasProducts = await dbContext.Products.AnyAsync();
+        List<Product>? seededProducts = null;
 
         if (!hasProducts)
         {
-            dbContext.Products.AddRange(
-                new Product { TenantId = tenant.Id, NameAr = "قهوة", NameEn = "Coffee", Barcode = "1001", Price = 40 },
-                new Product { TenantId = tenant.Id, NameAr = "شاي", NameEn = "Tea", Barcode = "1002", Price = 25 },
-                new Product { TenantId = tenant.Id, NameAr = "عصير برتقال", NameEn = "Orange Juice", Barcode = "1003", Price = 50 },
-                new Product { TenantId = tenant.Id, NameAr = "ساندوتش", NameEn = "Sandwich", Barcode = "1004", Price = 75 },
-                new Product { TenantId = tenant.Id, NameAr = "مياه", NameEn = "Water", Barcode = "1005", Price = 15 });
+            seededProducts =
+            [
+                new Product { TenantId = tenant.Id, CategoryId = drinksCategory?.Id, NameAr = "قهوة", NameEn = "Coffee", Barcode = "1001", Price = 40, TrackStock = true, StockQuantity = 100 },
+                new Product { TenantId = tenant.Id, CategoryId = drinksCategory?.Id, NameAr = "شاي", NameEn = "Tea", Barcode = "1002", Price = 25, TrackStock = true, StockQuantity = 100 },
+                new Product { TenantId = tenant.Id, CategoryId = drinksCategory?.Id, NameAr = "عصير برتقال", NameEn = "Orange Juice", Barcode = "1003", Price = 50, TrackStock = true, StockQuantity = 60 },
+                new Product { TenantId = tenant.Id, CategoryId = foodCategory?.Id, NameAr = "ساندوتش", NameEn = "Sandwich", Barcode = "1004", Price = 75, TrackStock = true, StockQuantity = 40 },
+                new Product { TenantId = tenant.Id, CategoryId = drinksCategory?.Id, NameAr = "مياه", NameEn = "Water", Barcode = "1005", Price = 15, TrackStock = true, StockQuantity = 200 },
+                new Product { TenantId = tenant.Id, CategoryId = foodCategory?.Id, NameAr = "كرواسون", NameEn = "Croissant", Barcode = "1006", Price = 35, TrackStock = true, StockQuantity = 50 },
+                new Product { TenantId = tenant.Id, CategoryId = foodCategory?.Id, NameAr = "بيتزا صغيرة", NameEn = "Mini Pizza", Barcode = "1007", Price = 90, TrackStock = true, StockQuantity = 25 },
+            ];
+
+            dbContext.Products.AddRange(seededProducts);
+        }
+
+        var cashierExists = await dbContext.Users
+            .AnyAsync(x => x.NormalizedUsername == "CASHIER");
+        AppUser? cashier = null;
+
+        if (!cashierExists)
+        {
+            cashier = new AppUser
+            {
+                TenantId = tenant.Id,
+                BranchId = branch.Id,
+                Username = "cashier",
+                NormalizedUsername = "CASHIER",
+                DisplayName = "كاشير تجريبي",
+                Role = UserRole.Cashier,
+                IsActive = true
+            };
+
+            cashier.PasswordHash = passwordHasher.HashPassword(cashier, "Cashier@123");
+
+            dbContext.Users.Add(cashier);
+        }
+
+        var hasCustomers = await dbContext.Customers.AnyAsync();
+        List<Customer>? seededCustomers = null;
+
+        if (!hasCustomers)
+        {
+            seededCustomers =
+            [
+                new Customer { TenantId = tenant.Id, Name = "أحمد محمود", Phone = "01001234567", Email = "ahmed@example.com", LoyaltyPoints = 120 },
+                new Customer { TenantId = tenant.Id, Name = "سارة علي", Phone = "01109876543", Email = "sara@example.com", LoyaltyPoints = 45 },
+                new Customer { TenantId = tenant.Id, Name = "محمد عبد الله", Phone = "01223344556" },
+            ];
+
+            dbContext.Customers.AddRange(seededCustomers);
         }
 
         await dbContext.SaveChangesAsync();
+
+        var hasShifts = await dbContext.Shifts.AnyAsync();
+
+        if (!hasShifts)
+        {
+            // Use whatever products/customers exist for this tenant, whether
+            // they were just seeded above or already existed from a prior run.
+            var products = seededProducts ?? await dbContext.Products
+                .Where(x => x.TenantId == tenant.Id)
+                .OrderBy(x => x.Barcode)
+                .ToListAsync();
+            var customers = seededCustomers ?? await dbContext.Customers
+                .Where(x => x.TenantId == tenant.Id)
+                .ToListAsync();
+
+            if (products.Count < 4)
+            {
+                await dbContext.SaveChangesAsync();
+                return;
+            }
+
+            seededProducts = products;
+            seededCustomers = customers;
+
+            var shiftUser = cashier ?? await dbContext.Users.FirstAsync(x => x.NormalizedUsername == "ADMIN");
+            var openedAt = DateTime.UtcNow.AddDays(-1);
+
+            var closedShift = new Shift
+            {
+                TenantId = tenant.Id,
+                BranchId = branch.Id,
+                UserId = shiftUser.Id,
+                OpeningCash = 500,
+                ClosingCash = 950,
+                CashSales = 450,
+                ExpectedCash = 950,
+                CashDifference = 0,
+                OpenedAtUtc = openedAt,
+                ClosedAtUtc = openedAt.AddHours(8),
+                Status = ShiftStatus.Closed
+            };
+
+            dbContext.Shifts.Add(closedShift);
+            await dbContext.SaveChangesAsync();
+
+            var coffee = seededProducts[0];
+            var sandwich = seededProducts[3];
+            var water = seededProducts[4];
+
+            var order1 = BuildDemoOrder(
+                tenant.Id,
+                branch.Id,
+                closedShift.Id,
+                seededCustomers?.ElementAtOrDefault(0)?.Id,
+                "ORD-0001",
+                openedAt.AddHours(1),
+                (coffee, 2m),
+                (water, 1m));
+
+            var order2 = BuildDemoOrder(
+                tenant.Id,
+                branch.Id,
+                closedShift.Id,
+                seededCustomers?.ElementAtOrDefault(1)?.Id,
+                "ORD-0002",
+                openedAt.AddHours(3),
+                (sandwich, 1m),
+                (coffee, 1m));
+
+            dbContext.Orders.AddRange(order1, order2);
+            dbContext.Payments.AddRange(
+                new Payment { TenantId = tenant.Id, OrderId = order1.Id, Method = PaymentMethod.Cash, Amount = order1.TotalAmount },
+                new Payment { TenantId = tenant.Id, OrderId = order2.Id, Method = PaymentMethod.Card, Amount = order2.TotalAmount, ReferenceNumber = "REF-1002" });
+
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    private static Order BuildDemoOrder(
+        Guid tenantId,
+        Guid branchId,
+        Guid shiftId,
+        Guid? customerId,
+        string orderNumber,
+        DateTime createdAtUtc,
+        params (Product Product, decimal Quantity)[] items)
+    {
+        var order = new Order
+        {
+            TenantId = tenantId,
+            BranchId = branchId,
+            ShiftId = shiftId,
+            CustomerId = customerId,
+            OrderNumber = orderNumber,
+            Status = OrderStatus.Completed,
+            CreatedAtUtc = createdAtUtc
+        };
+
+        decimal subtotal = 0;
+
+        foreach (var (product, quantity) in items)
+        {
+            var lineTotal = product.Price * quantity;
+            subtotal += lineTotal;
+
+            order.Lines.Add(new OrderLine
+            {
+                TenantId = tenantId,
+                OrderId = order.Id,
+                ProductId = product.Id,
+                ProductName = product.NameAr,
+                Quantity = quantity,
+                UnitPrice = product.Price,
+                LineTotal = lineTotal
+            });
+        }
+
+        order.Subtotal = subtotal;
+        order.TotalAmount = subtotal;
+
+        return order;
     }
 
     /// <summary>
