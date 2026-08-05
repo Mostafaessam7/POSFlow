@@ -1,0 +1,237 @@
+<div class="pos-page" dir="rtl">
+  <header class="pos-header">
+    <div>
+      <h1>نقطة البيع</h1>
+      <p>ابحث عن منتج أو دوس عليه من الكتالوج لإضافته للفاتورة</p>
+    </div>
+
+    <div class="header-actions">
+      <button class="ghost-button" type="button" (click)="goToOpenShift()">
+        الوردية
+      </button>
+
+      <button class="ghost-button" type="button" (click)="goToHistory()">
+        سجل الورديات
+      </button>
+    </div>
+  </header>
+
+  @if (errorMessage) {
+    <div class="alert error">
+      {{ errorMessage }}
+    </div>
+  }
+
+  @if (lastReceipt) {
+    <section class="receipt-card">
+      <h2>تمت عملية البيع بنجاح ✅</h2>
+
+      <div class="detail">
+        <span>رقم الفاتورة</span>
+        <strong>{{ lastReceipt.orderNumber }}</strong>
+      </div>
+
+      <div class="detail">
+        <span>الإجمالي</span>
+        <strong>{{ lastReceipt.totalAmount | number:'1.2-2' }}</strong>
+      </div>
+
+      @if (lastReceipt.changeDue > 0) {
+        <div class="detail change">
+          <span>الباقي للعميل</span>
+          <strong>{{ lastReceipt.changeDue | number:'1.2-2' }}</strong>
+        </div>
+      }
+
+      <button class="primary-button" type="button" (click)="startNewSale()">
+        فاتورة جديدة
+      </button>
+    </section>
+  } @else {
+    <div class="pos-layout">
+      <section class="catalog">
+        <input
+          class="search-box"
+          type="text"
+          placeholder="ابحث بالاسم أو الباركود..."
+          aria-label="بحث عن منتج"
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearchChange()"
+        />
+
+        @if (isLoadingProducts) {
+          <div class="message">جاري تحميل المنتجات...</div>
+        }
+
+        @if (!isLoadingProducts) {
+          <div class="product-grid">
+            @for (product of filteredProducts; track product.id) {
+              <button
+                class="product-tile"
+                type="button"
+                [class.out-of-stock]="product.trackStock && product.stockQuantity <= 0"
+                (click)="addToCart(product)">
+                <span class="name">{{ product.nameAr }}</span>
+                <span class="price">{{ product.price | number:'1.2-2' }}</span>
+                @if (product.trackStock) {
+                  <span class="stock-badge">
+                    متاح: {{ product.stockQuantity }}
+                  </span>
+                }
+              </button>
+            } @empty {
+              <div class="message">لا توجد منتجات مطابقة</div>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="cart">
+        <h2>الفاتورة الحالية</h2>
+
+        @if (cart.length === 0) {
+          <div class="empty-cart">السلة فارغة، دوس على منتج للبدء</div>
+        }
+
+        @if (cart.length > 0) {
+          <div class="cart-lines">
+            @for (line of cart; track line.productId) {
+              <div class="cart-line">
+                <div class="line-info">
+                  <strong>{{ line.nameAr }}</strong>
+                  <span>{{ line.unitPrice | number:'1.2-2' }} × {{ line.quantity }}</span>
+                </div>
+
+                <div class="line-qty">
+                  <button
+                    type="button"
+                    aria-label="تقليل الكمية"
+                    (click)="decrement(line)">−</button>
+                  <span>{{ line.quantity }}</span>
+                  <button
+                    type="button"
+                    aria-label="زيادة الكمية"
+                    (click)="increment(line)">+</button>
+                </div>
+
+                <div class="line-total">
+                  {{ (line.unitPrice * line.quantity) | number:'1.2-2' }}
+                </div>
+
+                <button
+                  class="remove-line"
+                  type="button"
+                  [attr.aria-label]="'حذف ' + line.nameAr + ' من السلة'"
+                  (click)="removeLine(line)">
+                  ×
+                </button>
+              </div>
+            }
+          </div>
+
+          <button class="clear-cart" type="button" (click)="clearCart()">
+            إفراغ السلة
+          </button>
+
+          <div class="total-row">
+            <span>الإجمالي</span>
+            <strong>{{ total | number:'1.2-2' }}</strong>
+          </div>
+
+          <div class="payment-lines">
+            @for (line of paymentLines; track $index) {
+              <div class="payment-line">
+                <div class="payment-methods">
+                  <button
+                    class="method-button"
+                    type="button"
+                    [class.active]="line.method === PaymentMethod.Cash"
+                    (click)="setLineMethod(line, PaymentMethod.Cash)">
+                    نقدي
+                  </button>
+
+                  <button
+                    class="method-button"
+                    type="button"
+                    [class.active]="line.method === PaymentMethod.Card"
+                    (click)="setLineMethod(line, PaymentMethod.Card)">
+                    بطاقة
+                  </button>
+
+                  @if (paymentLines.length > 1) {
+                    <button
+                      class="remove-payment"
+                      type="button"
+                      aria-label="حذف طريقة الدفع"
+                      (click)="removePaymentLine(line)">
+                      ×
+                    </button>
+                  }
+                </div>
+
+                <div class="amount-input">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [(ngModel)]="line.amount"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="المبلغ"
+                  />
+
+                  <button type="button" (click)="fillRemaining(line)">
+                    = المتبقي
+                  </button>
+                </div>
+
+                @if (line.method === PaymentMethod.Card) {
+                  <input
+                    class="reference-input"
+                    type="text"
+                    placeholder="رقم مرجعي (اختياري)"
+                    [(ngModel)]="line.referenceNumber"
+                    [ngModelOptions]="{ standalone: true }"
+                  />
+                }
+              </div>
+            }
+          </div>
+
+          <button class="add-payment" type="button" (click)="addPaymentLine()">
+            + إضافة طريقة دفع (تقسيم الفاتورة)
+          </button>
+
+          @if (remainingBalance > 0) {
+            <div class="change-row remaining">
+              <span>المتبقي على الفاتورة</span>
+              <strong>{{ remainingBalance | number:'1.2-2' }}</strong>
+            </div>
+          }
+
+          @if (changeDue > 0) {
+            <div class="change-row">
+              <span>الباقي للعميل</span>
+              <strong>{{ changeDue | number:'1.2-2' }}</strong>
+            </div>
+          }
+
+          <button
+            class="checkout-button"
+            type="button"
+            [disabled]="isCheckingOut"
+            (click)="checkout()">
+            @if (isCheckingOut) {
+              جاري إتمام البيع...
+            } @else {
+              إتمام البيع
+            }
+          </button>
+
+          <p class="keyboard-hint">
+            أو دوس Enter لإتمام البيع
+          </p>
+        }
+      </section>
+    </div>
+  }
+</div>

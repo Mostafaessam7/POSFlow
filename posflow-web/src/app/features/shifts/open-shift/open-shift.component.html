@@ -1,0 +1,176 @@
+<div class="shift-page" dir="rtl">
+  <section class="shift-card">
+    <header>
+      <div>
+        <span class="wordmark">POSFLOW</span>
+        <h1>إدارة الوردية</h1>
+        <p>فتح وإغلاق وردية الكاشير</p>
+      </div>
+
+      <div class="header-links">
+        @if (isAdmin || isManager) {
+          <button
+            class="text-link"
+            type="button"
+            (click)="goToDashboard()">
+            لوحة المبيعات
+          </button>
+        }
+
+        @if (isAdmin) {
+          <button
+            class="text-link"
+            type="button"
+            (click)="goToUsers()">
+            المستخدمون
+          </button>
+
+          <button
+            class="text-link"
+            type="button"
+            (click)="goToBranches()">
+            الفروع
+          </button>
+        }
+
+        <button
+          class="text-link"
+          type="button"
+          (click)="goToHistory()">
+          سجل الورديات
+        </button>
+
+        <button
+          class="text-link"
+          type="button"
+          (click)="logout()">
+          تسجيل الخروج
+        </button>
+      </div>
+    </header>
+
+    @if (isLoading) {
+      <div class="message">
+        جاري تحميل بيانات الوردية...
+      </div>
+    }
+
+    @if (errorMessage) {
+      <div class="alert error">
+        {{ errorMessage }}
+      </div>
+    }
+
+    @if (successMessage) {
+      <div class="alert success">
+        {{ successMessage }}
+      </div>
+    }
+
+    @if (!isLoading && !currentShift) {
+      <form
+        [formGroup]="openForm"
+        (ngSubmit)="openShift()">
+
+        <div class="form-group">
+          <label for="openingCash">
+            النقدية الافتتاحية
+          </label>
+
+          <input
+            id="openingCash"
+            type="number"
+            min="0"
+            step="0.01"
+            formControlName="openingCash"
+          />
+
+          @if (
+            openForm.controls.openingCash.touched &&
+            openForm.controls.openingCash.invalid
+          ) {
+            <span class="validation-error">
+              أدخل قيمة صحيحة لا تقل عن صفر
+            </span>
+          }
+        </div>
+
+        <button
+          class="primary-button"
+          type="submit"
+          [disabled]="isSubmitting">
+
+          @if (isSubmitting) {
+            جاري فتح الوردية...
+          } @else {
+            فتح الوردية
+          }
+        </button>
+      </form>
+    }
+
+    @if (!isLoading && currentShift) {
+      <div class="shift-details">
+        <div class="detail">
+          <span>حالة الوردية</span>
+          <strong>مفتوحة</strong>
+        </div>
+
+        <div class="detail">
+          <span>النقدية الافتتاحية</span>
+          <strong>
+            {{ currentShift.openingCash | number:'1.2-2' }}
+          </strong>
+        </div>
+
+        <div class="detail">
+          <span>وقت الفتح</span>
+          <strong>
+            {{ currentShift.openedAtUtc | date:'medium' }}
+          </strong>
+        </div>
+      </div>
+
+      <button
+        class="primary-button"
+        type="button"
+        (click)="continueToPos()">
+
+        الانتقال إلى نقطة البيع
+      </button>
+
+      <hr />
+
+      <form
+        [formGroup]="closeForm"
+        (ngSubmit)="closeShift()">
+
+        <div class="form-group">
+          <label for="closingCash">
+            النقدية الفعلية في الدرج
+          </label>
+
+          <input
+            id="closingCash"
+            type="number"
+            min="0"
+            step="0.01"
+            formControlName="closingCash"
+          />
+        </div>
+
+        <button
+          class="danger-button"
+          type="submit"
+          [disabled]="isSubmitting">
+
+          @if (isSubmitting) {
+            جاري إغلاق الوردية...
+          } @else {
+            إغلاق الوردية
+          }
+        </button>
+      </form>
+    }
+  </section>
+</div>

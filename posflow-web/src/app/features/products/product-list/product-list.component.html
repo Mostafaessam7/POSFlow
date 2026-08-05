@@ -1,0 +1,274 @@
+<div class="products-page" dir="rtl">
+  <header class="page-header">
+    <div>
+      <h1>المنتجات</h1>
+      <p>كتالوج المنتجات المتاحة للبيع ({{ totalCount }} منتج)</p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        class="ghost-button"
+        type="button"
+        (click)="goToPos()">
+        الانتقال إلى نقطة البيع
+      </button>
+
+      @if (canManage) {
+        <button
+          class="primary-button"
+          type="button"
+          (click)="openCreateForm()">
+          + إضافة منتج
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (errorMessage) {
+    <div class="alert error">
+      {{ errorMessage }}
+    </div>
+  }
+
+  <div class="filters-row">
+    <select
+      class="category-filter"
+      (change)="onCategoryFilterChange($any($event.target).value)">
+      <option value="">كل التصنيفات</option>
+      @for (category of categories; track category.id) {
+        <option [value]="category.id">{{ category.nameAr }}</option>
+      }
+    </select>
+
+    @if (canManage) {
+      <label class="toggle-inactive">
+        <input
+          type="checkbox"
+          [checked]="showInactive"
+          (change)="toggleShowInactive()"
+        />
+        عرض المنتجات الموقوفة أيضًا
+      </label>
+    }
+  </div>
+
+  @if (isFormOpen) {
+    <section class="product-form-card">
+      <h2>{{ editingId ? 'تعديل منتج' : 'إضافة منتج جديد' }}</h2>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nameAr">الاسم بالعربي</label>
+            <input id="nameAr" type="text" formControlName="nameAr" />
+
+            @if (
+              form.controls.nameAr.touched &&
+              form.controls.nameAr.invalid
+            ) {
+              <span class="validation-error">
+                اسم المنتج مطلوب
+              </span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="nameEn">الاسم بالإنجليزي (اختياري)</label>
+            <input id="nameEn" type="text" formControlName="nameEn" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="barcode">الباركود (اختياري)</label>
+            <input id="barcode" type="text" formControlName="barcode" />
+          </div>
+
+          <div class="form-group">
+            <label for="price">السعر</label>
+            <input
+              id="price"
+              type="number"
+              min="0.01"
+              step="0.01"
+              formControlName="price"
+            />
+
+            @if (
+              form.controls.price.touched &&
+              form.controls.price.invalid
+            ) {
+              <span class="validation-error">
+                السعر يجب أن يكون أكبر من صفر
+              </span>
+            }
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="categoryId">التصنيف (اختياري)</label>
+            <select id="categoryId" formControlName="categoryId">
+              <option value="">بدون تصنيف</option>
+              @for (category of categories; track category.id) {
+                <option [value]="category.id">{{ category.nameAr }}</option>
+              }
+            </select>
+
+            <div class="add-category-row">
+              <input
+                type="text"
+                placeholder="تصنيف جديد..."
+                [(ngModel)]="newCategoryName"
+                [ngModelOptions]="{ standalone: true }"
+              />
+              <button
+                type="button"
+                [disabled]="isAddingCategory"
+                (click)="addCategory()">
+                + إضافة
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group stock-group">
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="trackStock" />
+              تتبع كمية المخزون لهذا المنتج
+            </label>
+
+            @if (form.controls.trackStock.value) {
+              <input
+                type="number"
+                min="0"
+                step="1"
+                formControlName="stockQuantity"
+                placeholder="الكمية المتاحة"
+              />
+            }
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button
+            class="primary-button"
+            type="submit"
+            [disabled]="isSaving">
+            @if (isSaving) {
+              جاري الحفظ...
+            } @else {
+              حفظ
+            }
+          </button>
+
+          <button
+            class="ghost-button"
+            type="button"
+            (click)="cancelForm()">
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+
+  @if (isLoading) {
+    <div class="message">جاري تحميل المنتجات...</div>
+  }
+
+  @if (!isLoading) {
+    <table class="products-table">
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>التصنيف</th>
+          <th>الباركود</th>
+          <th>السعر</th>
+          <th>المخزون</th>
+          <th>الحالة</th>
+          @if (canManage) {
+            <th></th>
+          }
+        </tr>
+      </thead>
+
+      <tbody>
+        @for (product of products; track product.id) {
+          <tr [class.inactive-row]="!product.isActive">
+            <td>
+              <strong>{{ product.nameAr }}</strong>
+              @if (product.nameEn) {
+                <div class="muted">{{ product.nameEn }}</div>
+              }
+            </td>
+            <td>{{ product.categoryName || '—' }}</td>
+            <td>{{ product.barcode || '—' }}</td>
+            <td>{{ product.price | number:'1.2-2' }}</td>
+            <td>
+              @if (product.trackStock) {
+                <span [class.low-stock]="product.stockQuantity <= 0">
+                  {{ product.stockQuantity }}
+                </span>
+              } @else {
+                <span class="muted">غير متتبع</span>
+              }
+            </td>
+            <td>
+              <span
+                class="badge"
+                [class.badge-active]="product.isActive"
+                [class.badge-inactive]="!product.isActive">
+                {{ product.isActive ? 'متاح' : 'موقوف' }}
+              </span>
+            </td>
+            @if (canManage) {
+              <td class="row-actions">
+                <button
+                  class="link-button"
+                  type="button"
+                  (click)="openEditForm(product)">
+                  تعديل
+                </button>
+
+                @if (product.isActive) {
+                  <button
+                    class="link-button danger"
+                    type="button"
+                    (click)="deactivate(product)">
+                    إيقاف
+                  </button>
+                }
+              </td>
+            }
+          </tr>
+        } @empty {
+          <tr>
+            <td [attr.colspan]="canManage ? 7 : 6" class="empty">
+              لا توجد منتجات بعد
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button
+          [disabled]="page <= 1"
+          type="button"
+          (click)="goToPage(page - 1)">
+          السابق
+        </button>
+
+        <span>صفحة {{ page }} من {{ totalPages }}</span>
+
+        <button
+          [disabled]="page >= totalPages"
+          type="button"
+          (click)="goToPage(page + 1)">
+          التالي
+        </button>
+      </div>
+    }
+  }
+</div>

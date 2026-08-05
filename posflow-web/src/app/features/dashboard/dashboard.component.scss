@@ -1,0 +1,253 @@
+:host {
+  display: block;
+}
+
+.dashboard-page {
+  min-height: 100vh;
+  padding: 32px;
+  background: var(--color-bg);
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 26px;
+
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+  }
+
+  p {
+    margin: 6px 0 0;
+    color: var(--color-muted);
+  }
+}
+
+.ghost-button {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-primary);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.hero-card {
+  position: relative;
+  margin-bottom: 20px;
+  padding: 40px 36px 32px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
+  color: var(--color-surface);
+  overflow: hidden;
+  text-align: center;
+
+  /* Torn-receipt edge along the bottom, tying the "today's total" back
+     to the same paper-ticket idea as the checkout receipt card. */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background:
+      radial-gradient(circle at 10px 10px, transparent 9px, var(--color-primary) 9.5px)
+      0 0 / 20px 20px repeat-x;
+  }
+}
+
+.eyebrow {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+  margin-bottom: 10px;
+}
+
+.hero-number {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 56px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 36px;
+  margin-top: 26px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+
+  &.voided {
+    color: var(--color-danger-soft);
+  }
+}
+
+.stat-label {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.cards-row {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 20px;
+}
+
+.split-card,
+.top-products-card {
+  padding: 24px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+
+  h2 {
+    margin: 0 0 18px;
+    font-size: 16px;
+  }
+}
+
+.split-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-surface-sunken);
+  margin-bottom: 16px;
+}
+
+.split-cash {
+  background: var(--color-primary);
+}
+
+.split-card-portion {
+  background: var(--color-accent);
+}
+
+.split-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--color-muted);
+
+  strong {
+    margin-right: auto;
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+  }
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+
+  &.cash {
+    background: var(--color-primary);
+  }
+
+  &.card {
+    background: var(--color-accent);
+  }
+}
+
+.top-products-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  li {
+    display: grid;
+    grid-template-columns: 24px 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--color-border);
+    font-size: 14px;
+
+    &:first-child {
+      border-top: none;
+    }
+  }
+}
+
+.rank {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.product-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-qty {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.product-revenue {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.empty {
+  padding: 20px 0;
+  text-align: center;
+  color: var(--color-muted-light);
+}
+
+.message {
+  padding: 24px;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.alert {
+  margin-bottom: 18px;
+  padding: 13px;
+  border-radius: var(--radius-sm);
+}
+
+.error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+@media (max-width: 720px) {
+  .cards-row {
+    grid-template-columns: 1fr;
+  }
+}

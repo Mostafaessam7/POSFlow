@@ -1,0 +1,84 @@
+<div class="login-page" dir="rtl">
+  <div class="login-card">
+    <div class="brand">
+      <h1>PosFlow</h1>
+      <p>نظام إدارة نقاط البيع</p>
+    </div>
+
+    <form
+      [formGroup]="form"
+      (ngSubmit)="submit()">
+
+      <div class="form-group">
+        <label for="username">
+          اسم المستخدم
+        </label>
+
+        <input
+          id="username"
+          type="text"
+          formControlName="username"
+          placeholder="ادخل اسم المستخدم"
+          autocomplete="username"
+        />
+
+        @if (
+          form.controls.username.touched &&
+          form.controls.username.invalid
+        ) {
+          <span class="validation-error">
+            اسم المستخدم مطلوب
+          </span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="password">
+          كلمة المرور
+        </label>
+
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          placeholder="ادخل كلمة المرور"
+          autocomplete="current-password"
+        />
+
+        @if (
+          form.controls.password.touched &&
+          form.controls.password.invalid
+        ) {
+          <span class="validation-error">
+            كلمة المرور مطلوبة
+          </span>
+        }
+      </div>
+
+      @if (errorMessage) {
+        <div class="api-error">
+          {{ errorMessage }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        [disabled]="isSubmitting">
+
+        @if (isSubmitting) {
+          جاري تسجيل الدخول...
+        } @else {
+          تسجيل الدخول
+        }
+      </button>
+    </form>
+
+    <button class="text-button" type="button" (click)="goToForgotPassword()">
+      نسيت كلمة المرور؟
+    </button>
+
+    <p class="version">
+      PosFlow MVP
+    </p>
+  </div>
+</div>

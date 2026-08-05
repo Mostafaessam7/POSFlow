@@ -1,0 +1,27 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Angular / Node
+posflow-web/node_modules/
+posflow-web/dist/
+posflow-web/.angular/
+npm-debug.log*
+
+# Environment / secrets - never commit real values
+.env
+.env.*
+!.env.example
+appsettings.Production.json
+appsettings.*.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log

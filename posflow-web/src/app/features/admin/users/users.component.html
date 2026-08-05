@@ -1,0 +1,225 @@
+<div class="users-page" dir="rtl">
+  <header class="page-header">
+    <div>
+      <h1>المستخدمون</h1>
+      <p>إدارة الكاشيرية والمديرين</p>
+    </div>
+
+    <div class="header-actions">
+      <button class="ghost-button" type="button" (click)="goBack()">
+        رجوع
+      </button>
+
+      <button class="primary-button" type="button" (click)="openCreateForm()">
+        + إضافة مستخدم
+      </button>
+    </div>
+  </header>
+
+  @if (errorMessage) {
+    <div class="alert error">{{ errorMessage }}</div>
+  }
+
+  <label class="toggle-inactive">
+    <input
+      type="checkbox"
+      [checked]="showInactive"
+      (change)="toggleShowInactive()"
+    />
+    عرض المستخدمين الموقوفين أيضًا
+  </label>
+
+  @if (isFormOpen) {
+    <section class="form-card">
+      <h2>{{ editingId ? 'تعديل مستخدم' : 'إضافة مستخدم جديد' }}</h2>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="username">اسم المستخدم</label>
+            <input id="username" type="text" formControlName="username" />
+
+            @if (
+              form.controls.username.touched &&
+              form.controls.username.invalid
+            ) {
+              <span class="validation-error">اسم المستخدم مطلوب</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="displayName">الاسم</label>
+            <input id="displayName" type="text" formControlName="displayName" />
+
+            @if (
+              form.controls.displayName.touched &&
+              form.controls.displayName.invalid
+            ) {
+              <span class="validation-error">الاسم مطلوب</span>
+            }
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="email">الإيميل (اختياري - لإعادة تعيين كلمة المرور)</label>
+            <input id="email" type="email" formControlName="email" />
+
+            @if (
+              form.controls.email.touched &&
+              form.controls.email.invalid
+            ) {
+              <span class="validation-error">صيغة الإيميل غير صحيحة</span>
+            }
+          </div>
+
+          @if (!editingId) {
+            <div class="form-group">
+              <label for="password">كلمة المرور</label>
+              <input id="password" type="password" formControlName="password" />
+
+              @if (
+                form.controls.password.touched &&
+                form.controls.password.invalid
+              ) {
+                <span class="validation-error">
+                  كلمة المرور 6 أحرف على الأقل
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="role">الدور</label>
+            <select id="role" formControlName="role">
+              <option value="Cashier">كاشير</option>
+              <option value="Manager">مدير فرع</option>
+              <option value="Admin">أدمن</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="branchId">الفرع</label>
+            <select id="branchId" formControlName="branchId">
+              <option value="">كل الفروع (أدمن)</option>
+              @for (branch of branches; track branch.id) {
+                <option [value]="branch.id">{{ branch.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        @if (editingId) {
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="isActive" />
+            الحساب مفعّل
+          </label>
+        }
+
+        <div class="form-actions">
+          <button class="primary-button" type="submit" [disabled]="isSaving">
+            @if (isSaving) { جاري الحفظ... } @else { حفظ }
+          </button>
+
+          <button class="ghost-button" type="button" (click)="cancelForm()">
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+
+  @if (isLoading) {
+    <div class="message">جاري تحميل المستخدمين...</div>
+  }
+
+  @if (!isLoading) {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>اسم المستخدم</th>
+          <th>الدور</th>
+          <th>الفرع</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+
+      <tbody>
+        @for (user of users; track user.id) {
+          <tr [class.inactive-row]="!user.isActive">
+            <td>
+              <strong>{{ user.displayName }}</strong>
+              @if (isSelf(user)) {
+                <span class="you-badge">أنت</span>
+              }
+            </td>
+            <td>{{ user.username }}</td>
+            <td>{{ user.role }}</td>
+            <td>{{ branchName(user.branchId) }}</td>
+            <td>
+              <span
+                class="badge"
+                [class.badge-active]="user.isActive"
+                [class.badge-inactive]="!user.isActive">
+                {{ user.isActive ? 'مفعّل' : 'موقوف' }}
+              </span>
+            </td>
+            <td class="row-actions">
+              <button
+                class="link-button"
+                type="button"
+                (click)="openEditForm(user)">
+                تعديل
+              </button>
+
+              <button
+                class="link-button"
+                type="button"
+                (click)="openResetPassword(user)">
+                تغيير كلمة المرور
+              </button>
+            </td>
+          </tr>
+
+          @if (resettingPasswordForId === user.id) {
+            <tr class="reset-password-row">
+              <td colspan="6">
+                <div class="reset-password-inline">
+                  <input
+                    type="password"
+                    placeholder="كلمة المرور الجديدة"
+                    [(ngModel)]="newPassword"
+                    [ngModelOptions]="{ standalone: true }"
+                  />
+
+                  <button
+                    class="primary-button small"
+                    type="button"
+                    [disabled]="isResettingPassword"
+                    (click)="submitResetPassword()">
+                    حفظ
+                  </button>
+
+                  <button
+                    class="ghost-button small"
+                    type="button"
+                    (click)="cancelResetPassword()">
+                    إلغاء
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty">لا يوجد مستخدمون بعد</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

@@ -1,0 +1,69 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(33, 31, 28, 0.45);
+  padding: 20px;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 400px;
+  padding: 24px;
+  border-radius: var(--radius-md, 12px);
+  background: var(--color-surface, #fff);
+  box-shadow: var(--shadow-card-lg, 0 12px 35px rgba(0, 0, 0, 0.2));
+
+  h2 {
+    margin: 0 0 10px;
+    font-size: 18px;
+  }
+
+  p {
+    margin: 0 0 18px;
+    color: var(--color-muted, #7a7267);
+    line-height: 1.6;
+  }
+
+  input {
+    width: 100%;
+    height: 44px;
+    padding: 0 12px;
+    margin-bottom: 18px;
+    border: 1px solid var(--color-border-strong, #d8cfc0);
+    border-radius: var(--radius-sm, 8px);
+    font-size: 15px;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.actions button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.confirm {
+  border: 0;
+  background: var(--color-primary, #0b6e5a);
+  color: var(--color-surface, #fff);
+}
+
+.confirm.danger {
+  background: var(--color-danger, #b3401f);
+}
+
+.cancel {
+  border: 1px solid var(--color-border-strong, #d8cfc0);
+  background: var(--color-surface, #fff);
+  color: var(--color-ink, #211f1c);
+}
