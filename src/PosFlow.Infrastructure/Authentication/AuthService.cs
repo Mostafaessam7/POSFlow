@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using OtpNet;
 using PosFlow.Application.Auth;
 using PosFlow.Application.Common;
 using PosFlow.Domain.Entities;
@@ -23,6 +24,7 @@ public sealed class AuthService(
     : IAuthService
 {
     private const int PasswordResetTokenExpirationMinutes = 30;
+    private const int TwoFactorChallengeExpirationMinutes = 5;
 
     private readonly PosFlowDbContext _dbContext = dbContext;
     private readonly IPasswordHasher<AppUser> _passwordHasher = passwordHasher;
@@ -69,7 +71,162 @@ public sealed class AuthService(
             user.UpdatedAtUtc = DateTime.UtcNow;
         }
 
+        if (user.TwoFactorEnabled)
+        {
+            return await IssueTwoFactorChallengeAsync(user, cancellationToken);
+        }
+
         return await IssueTokensAsync(user, cancellationToken);
+    }
+
+    public async Task<LoginResponse?> VerifyTwoFactorAsync(
+        VerifyTwoFactorRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var tokenHash = HashToken(request.ChallengeToken);
+
+        var challenge = await _dbContext.TwoFactorChallenges
+            .SingleOrDefaultAsync(
+                x => x.ChallengeTokenHash == tokenHash,
+                cancellationToken);
+
+        if (challenge is null || !challenge.IsActive)
+        {
+            return null;
+        }
+
+        var user = await _dbContext.Users
+            .SingleOrDefaultAsync(
+                x => x.Id == challenge.UserId && x.IsActive,
+                cancellationToken);
+
+        if (user is null ||
+            !user.TwoFactorEnabled ||
+            string.IsNullOrEmpty(user.TwoFactorSecret) ||
+            !VerifyTotpCode(user.TwoFactorSecret, request.Code))
+        {
+            return null;
+        }
+
+        challenge.UsedAtUtc = DateTime.UtcNow;
+
+        return await IssueTokensAsync(user, cancellationToken);
+    }
+
+    public async Task<TwoFactorSetupResponse> BeginTwoFactorSetupAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users
+            .SingleAsync(x => x.Id == userId, cancellationToken);
+
+        var secretBytes = KeyGeneration.GenerateRandomKey(20);
+        var secretKey = Base32Encoding.ToString(secretBytes);
+
+        user.TwoFactorSecret = secretKey;
+        user.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var issuer = Uri.EscapeDataString("PosFlow");
+        var label = Uri.EscapeDataString(user.Username);
+        var otpAuthUri =
+            $"otpauth://totp/{issuer}:{label}?secret={secretKey}&issuer={issuer}&digits=6&period=30";
+
+        return new TwoFactorSetupResponse(secretKey, otpAuthUri);
+    }
+
+    public async Task<bool> EnableTwoFactorAsync(
+        Guid userId,
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users
+            .SingleAsync(x => x.Id == userId, cancellationToken);
+
+        if (string.IsNullOrEmpty(user.TwoFactorSecret) ||
+            !VerifyTotpCode(user.TwoFactorSecret, code))
+        {
+            return false;
+        }
+
+        user.TwoFactorEnabled = true;
+        user.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
+    public async Task<bool> DisableTwoFactorAsync(
+        Guid userId,
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users
+            .SingleAsync(x => x.Id == userId, cancellationToken);
+
+        if (!user.TwoFactorEnabled ||
+            string.IsNullOrEmpty(user.TwoFactorSecret) ||
+            !VerifyTotpCode(user.TwoFactorSecret, code))
+        {
+            return false;
+        }
+
+        user.TwoFactorEnabled = false;
+        user.TwoFactorSecret = null;
+        user.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
+    private static bool VerifyTotpCode(string base32Secret, string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return false;
+        }
+
+        var totp = new Totp(Base32Encoding.ToBytes(base32Secret));
+
+        // ±1 step (30s) window absorbs minor clock drift between the
+        // user's authenticator app and this server, same as every
+        // mainstream TOTP implementation.
+        return totp.VerifyTotp(
+            code.Trim(),
+            out _,
+            new VerificationWindow(1, 1));
+    }
+
+    private async Task<LoginResponse> IssueTwoFactorChallengeAsync(
+        AppUser user,
+        CancellationToken cancellationToken)
+    {
+        var rawChallengeToken = GenerateSecureRandomToken();
+
+        _dbContext.TwoFactorChallenges.Add(new TwoFactorChallenge
+        {
+            UserId = user.Id,
+            ChallengeTokenHash = HashToken(rawChallengeToken),
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(
+                TwoFactorChallengeExpirationMinutes)
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return new LoginResponse(
+            TwoFactorRequired: true,
+            ChallengeToken: rawChallengeToken,
+            AccessToken: null,
+            ExpiresAtUtc: null,
+            RefreshToken: null,
+            UserId: null,
+            TenantId: null,
+            BranchId: null,
+            DisplayName: null,
+            Role: null);
     }
 
     public async Task<LoginResponse?> RefreshAsync(
@@ -319,6 +476,8 @@ public sealed class AuthService(
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new LoginResponse(
+            TwoFactorRequired: false,
+            ChallengeToken: null,
             AccessToken: accessToken,
             ExpiresAtUtc: expiresAtUtc,
             RefreshToken: rawRefreshToken,

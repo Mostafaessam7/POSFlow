@@ -21,6 +21,6 @@ public static class AuthHelper
         var result = await response.Content
             .ReadFromJsonAsync<LoginResponse>();
 
-        return result!.AccessToken;
+        return result!.AccessToken!;
     }
 }

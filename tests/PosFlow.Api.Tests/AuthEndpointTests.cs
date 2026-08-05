@@ -95,7 +95,7 @@ public sealed class AuthEndpointTests : IDisposable
 
         var firstRefresh = await _client.PostAsJsonAsync(
             "/api/auth/refresh",
-            new RefreshTokenRequest(login!.RefreshToken));
+            new RefreshTokenRequest(login!.RefreshToken!));
 
         Assert.Equal(HttpStatusCode.OK, firstRefresh.StatusCode);
 
@@ -103,7 +103,7 @@ public sealed class AuthEndpointTests : IDisposable
         // one a second time must now be rejected.
         var reusedRefresh = await _client.PostAsJsonAsync(
             "/api/auth/refresh",
-            new RefreshTokenRequest(login.RefreshToken));
+            new RefreshTokenRequest(login.RefreshToken!));
 
         Assert.Equal(HttpStatusCode.Unauthorized, reusedRefresh.StatusCode);
     }

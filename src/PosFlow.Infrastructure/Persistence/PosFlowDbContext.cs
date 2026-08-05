@@ -44,6 +44,7 @@ public sealed class PosFlowDbContext(
     public DbSet<AppUser> Users => Set<AppUser>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<TwoFactorChallenge> TwoFactorChallenges => Set<TwoFactorChallenge>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -288,6 +289,18 @@ public sealed class PosFlowDbContext(
             entity.HasIndex(x => x.UserId);
 
             entity.Property(x => x.TokenHash)
+                .HasMaxLength(200)
+                .IsRequired();
+        });
+
+        modelBuilder.Entity<TwoFactorChallenge>(entity =>
+        {
+            entity.ToTable("TwoFactorChallenges", "auth");
+
+            entity.HasIndex(x => x.ChallengeTokenHash).IsUnique();
+            entity.HasIndex(x => x.UserId);
+
+            entity.Property(x => x.ChallengeTokenHash)
                 .HasMaxLength(200)
                 .IsRequired();
         });
