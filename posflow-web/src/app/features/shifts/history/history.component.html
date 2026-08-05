@@ -1,0 +1,144 @@
+<div class="history-page" dir="rtl">
+  <header class="page-header">
+    <div>
+      <h1>سجل الورديات</h1>
+      <p>
+        @if (showBranchWide) {
+          آخر 50 وردية لكل الكاشيرية في الفرع
+        } @else {
+          آخر 30 وردية لك
+        }
+      </p>
+    </div>
+
+    <div class="header-actions">
+      @if (canViewBranch) {
+        <button class="ghost-button" type="button" (click)="toggleScope()">
+          @if (showBranchWide) {
+            عرض ورديتي فقط
+          } @else {
+            عرض كل ورديات الفرع
+          }
+        </button>
+      }
+
+      <button class="ghost-button" type="button" (click)="goBack()">
+        رجوع
+      </button>
+    </div>
+  </header>
+
+  @if (errorMessage) {
+    <div class="alert error">
+      {{ errorMessage }}
+    </div>
+  }
+
+  @if (isLoading) {
+    <div class="message">جاري تحميل السجل...</div>
+  }
+
+  @if (!isLoading && shifts.length === 0) {
+    <div class="message">لا يوجد سجل ورديات بعد</div>
+  }
+
+  @if (!isLoading && shifts.length > 0) {
+    <div class="shift-list">
+      @for (shift of shifts; track shift.id) {
+        <div class="shift-card">
+          <button
+            class="shift-summary"
+            type="button"
+            (click)="toggleShift(shift)">
+            <div class="summary-main">
+              <span
+                class="status-badge"
+                [class.open]="shift.status === 'Open'">
+                {{ shift.status === 'Open' ? 'مفتوحة' : 'مغلقة' }}
+              </span>
+
+              <strong>{{ shift.openedAtUtc | date:'medium' }}</strong>
+
+              @if (showBranchWide && shift.cashierName) {
+                <span class="cashier-name">{{ shift.cashierName }}</span>
+              }
+            </div>
+
+            <div class="summary-numbers">
+              <span>مبيعات نقدية: {{ shift.cashSales | number:'1.2-2' }}</span>
+
+              @if (shift.status === 'Closed') {
+                <span
+                  class="difference"
+                  [class.negative]="(shift.cashDifference ?? 0) < 0">
+                  الفرق: {{ shift.cashDifference | number:'1.2-2' }}
+                </span>
+              }
+            </div>
+
+            <span class="chevron">
+              {{ expandedShiftId === shift.id ? '▲' : '▼' }}
+            </span>
+          </button>
+
+          @if (expandedShiftId === shift.id) {
+            <div class="shift-orders">
+              @if (isLoadingOrders && !ordersByShift[shift.id]) {
+                <div class="message">جاري تحميل الفواتير...</div>
+              }
+
+              @if (ordersByShift[shift.id]?.length === 0) {
+                <div class="message">لا توجد فواتير في هذه الوردية</div>
+              }
+
+              @for (order of ordersByShift[shift.id]; track order.id) {
+                <div
+                  class="order-row"
+                  [class.voided]="order.status === 'Cancelled'">
+                  <span class="order-number">{{ order.orderNumber }}</span>
+                  <span>{{ order.createdAtUtc | date:'shortTime' }}</span>
+                  <span class="order-total">
+                    {{ order.totalAmount | number:'1.2-2' }}
+                  </span>
+
+                  @if (order.status === 'Cancelled') {
+                    <span class="voided-badge" [title]="order.voidReason || ''">
+                      ملغاة
+                    </span>
+                  } @else if (canVoid(shift)) {
+                    <button
+                      class="void-button"
+                      type="button"
+                      (click)="voidOrder(shift, order)">
+                      إلغاء
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button
+          [disabled]="page <= 1"
+          type="button"
+          (click)="goToPage(page - 1)">
+          السابق
+        </button>
+
+        <span>صفحة {{ page }} من {{ totalPages }}</span>
+
+        <button
+          [disabled]="page >= totalPages"
+          type="button"
+          (click)="goToPage(page + 1)">
+          التالي
+        </button>
+      </div>
+    }
+  }
+</div>

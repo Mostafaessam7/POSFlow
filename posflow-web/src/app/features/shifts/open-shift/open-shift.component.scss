@@ -1,0 +1,156 @@
+
+:host {
+  display: block;
+}
+
+.shift-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--color-bg);
+}
+
+.shift-card {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  padding: 34px 30px 30px;
+  border-radius: 18px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card-lg);
+  border-top: 4px solid var(--color-primary);
+}
+
+.wordmark {
+  display: inline-block;
+  margin-bottom: 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-primary);
+}
+
+header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 26px;
+
+  h1 {
+    margin: 0;
+    font-size: 28px;
+  }
+
+  p {
+    margin: 7px 0 0;
+    color: var(--color-muted);
+  }
+}
+
+.text-link {
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.header-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+
+  label {
+    font-weight: 600;
+  }
+
+  input {
+    height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 9px;
+    font-size: 17px;
+  }
+}
+
+.shift-details {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px;
+  border-radius: 9px;
+  background: var(--color-surface-sunken);
+
+  span {
+    color: var(--color-muted);
+  }
+}
+
+.primary-button,
+.danger-button {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--color-surface);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.primary-button {
+  background: var(--color-primary);
+}
+
+.danger-button {
+  background: var(--color-danger);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.alert {
+  margin-bottom: 18px;
+  padding: 13px;
+  border-radius: 9px;
+}
+
+.error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.success {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.validation-error {
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+hr {
+  margin: 28px 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}

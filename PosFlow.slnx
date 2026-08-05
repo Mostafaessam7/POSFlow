@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PosFlow.Api/PosFlow.Api.csproj" />
+    <Project Path="src/PosFlow.Application/PosFlow.Application.csproj" />
+    <Project Path="src/PosFlow.Domain/PosFlow.Domain.csproj" />
+    <Project Path="src/PosFlow.Infrastructure/PosFlow.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PosFlow.Application.Tests/PosFlow.Application.Tests.csproj" />
+    <Project Path="tests/PosFlow.Api.Tests/PosFlow.Api.Tests.csproj" />
+  </Folder>
+</Solution>

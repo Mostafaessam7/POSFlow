@@ -1,0 +1,98 @@
+<div class="dashboard-page" dir="rtl">
+  <header class="page-header">
+    <div>
+      <h1>لوحة المبيعات</h1>
+      <p>ملخص أداء الفرع اليوم</p>
+    </div>
+
+    <button class="ghost-button" type="button" (click)="goBack()">
+      رجوع
+    </button>
+  </header>
+
+  @if (errorMessage) {
+    <div class="alert error">{{ errorMessage }}</div>
+  }
+
+  @if (isLoading) {
+    <div class="message">جاري تحميل الملخص...</div>
+  }
+
+  @if (!isLoading && summary) {
+    <section class="hero-card">
+      <span class="eyebrow">إجمالي مبيعات اليوم</span>
+      <span class="hero-number">{{ summary.totalSales | number:'1.2-2' }}</span>
+
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-value">{{ summary.orderCount }}</span>
+          <span class="stat-label">فاتورة</span>
+        </div>
+
+        <div class="stat">
+          <span class="stat-value">{{ summary.averageTicket | number:'1.2-2' }}</span>
+          <span class="stat-label">متوسط الفاتورة</span>
+        </div>
+
+        @if (summary.voidedOrderCount > 0) {
+          <div class="stat">
+            <span class="stat-value voided">{{ summary.voidedOrderCount }}</span>
+            <span class="stat-label">فاتورة ملغاة</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <div class="cards-row">
+      <section class="split-card">
+        <h2>طرق الدفع</h2>
+
+        @if (summary.totalSales > 0) {
+          <div class="split-bar">
+            <div
+              class="split-cash"
+              [style.width.%]="(summary.cashSales / summary.totalSales) * 100">
+            </div>
+            <div
+              class="split-card-portion"
+              [style.width.%]="(summary.cardSales / summary.totalSales) * 100">
+            </div>
+          </div>
+        }
+
+        <div class="split-legend">
+          <div class="legend-item">
+            <span class="dot cash"></span>
+            نقدي
+            <strong>{{ summary.cashSales | number:'1.2-2' }}</strong>
+          </div>
+
+          <div class="legend-item">
+            <span class="dot card"></span>
+            بطاقة
+            <strong>{{ summary.cardSales | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="top-products-card">
+        <h2>الأكثر مبيعًا اليوم</h2>
+
+        @if (summary.topProducts.length === 0) {
+          <div class="empty">لا توجد مبيعات بعد</div>
+        }
+
+        <ol class="top-products-list">
+          @for (product of summary.topProducts; track product.productName) {
+            <li>
+              <span class="rank">{{ $index + 1 }}</span>
+              <span class="product-name">{{ product.productName }}</span>
+              <span class="product-qty">× {{ product.quantitySold }}</span>
+              <span class="product-revenue">{{ product.revenue | number:'1.2-2' }}</span>
+            </li>
+          }
+        </ol>
+      </section>
+    </div>
+  }
+</div>
