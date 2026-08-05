@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using FluentValidation;
@@ -84,6 +85,30 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
+
+    // Global fallback for every other endpoint (checkout included,
+    // which previously had no rate limiting at all - see
+    // ENTERPRISE-READINESS.md). Generous enough for real POS usage
+    // (a busy cashier easily does 1-2 requests/second) while still
+    // blunting scripted abuse or a runaway client bug. Per-user where
+    // authenticated (so one bad client can't exhaust another user's
+    // budget), per-IP otherwise.
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
+        httpContext =>
+        {
+            var key = httpContext.User.Identity?.IsAuthenticated == true
+                ? $"user:{httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value}"
+                : $"ip:{httpContext.Connection.RemoteIpAddress}";
+
+            return RateLimitPartition.GetFixedWindowLimiter(
+                key,
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 120,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                });
+        });
 });
 
 builder.Services.AddControllers(options =>
@@ -251,7 +276,9 @@ else
 }
 
 builder.Services.AddHealthChecks()
-    .AddCheck<DatabaseHealthCheck>("database");
+    .AddCheck<DatabaseHealthCheck>(
+        "database",
+        tags: ["ready"]);
 
 var app = builder.Build();
 
@@ -317,6 +344,26 @@ app.Use(async (context, next) =>
     context.Response.Headers.Append("X-Frame-Options", "DENY");
     context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
 
+    if (!app.Environment.IsDevelopment())
+    {
+        // This is a JSON API with no HTML views of its own outside
+        // Swagger, which is dev-only - so a locked-down CSP costs
+        // nothing in every other environment and blocks this response
+        // from ever being embedded/executed as active content if it
+        // somehow ended up rendered somewhere. Left off in
+        // Development because Swagger UI needs its own scripts/styles.
+        context.Response.Headers.Append(
+            "Content-Security-Policy",
+            "default-src 'none'; frame-ancestors 'none'");
+
+        // 1 year, include subdomains - standard HSTS preload
+        // candidate values. Only sent over HTTPS responses in
+        // practice, but harmless to always set.
+        context.Response.Headers.Append(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains");
+    }
+
     await next();
 });
 
@@ -330,7 +377,25 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// /health kept for backwards compatibility with anything already
+// pointed at it (see HANDOVER.md §6). /health/live is a pure
+// process-is-up check for a container orchestrator's liveness probe
+// (no dependencies - must never fail just because the DB is slow, or
+// the orchestrator will kill and restart a perfectly fine container).
+// /health/ready additionally checks the DB, for a readiness probe
+// (safe to take out of a load balancer's rotation, not to kill).
 app.MapHealthChecks("/health");
+
+app.MapHealthChecks("/health/live", new()
+{
+    Predicate = check => false
+});
+
+app.MapHealthChecks("/health/ready", new()
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
 
 app.Run();
 
