@@ -232,9 +232,23 @@ builder.Services.AddScoped<
     IReportService,
     ReportService>();
 
-builder.Services.AddScoped<
-    IEmailSender,
-    LoggingEmailSender>();
+builder.Services.Configure<SmtpOptions>(
+    builder.Configuration.GetSection(SmtpOptions.SectionName));
+
+// Real SMTP delivery kicks in as soon as Smtp:Host is configured
+// (environment variable Smtp__Host, or a secrets manager) - falls
+// back to logging the email for local development so forgot-password
+// stays usable without any mail infrastructure.
+var smtpHost = builder.Configuration["Smtp:Host"];
+
+if (!string.IsNullOrWhiteSpace(smtpHost))
+{
+    builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+}
+else
+{
+    builder.Services.AddScoped<IEmailSender, LoggingEmailSender>();
+}
 
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("database");
