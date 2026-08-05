@@ -52,6 +52,23 @@ static async Task RunApp(string[] args)
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Optional real secrets-manager integration: set KeyVault__Uri (env
+// var) to pull secrets from Azure Key Vault instead of/in addition to
+// environment variables. Off by default - nothing changes for anyone
+// not using Azure. DefaultAzureCredential works with a managed
+// identity in Azure, or `az login` locally for testing against a real
+// vault. Key Vault secret names use "--" where config uses ":" (e.g.
+// a Key Vault secret named "Jwt--Key" maps to Jwt:Key) - Azure Key
+// Vault doesn't allow ":" in secret names.
+var keyVaultUri = builder.Configuration["KeyVault:Uri"];
+
+if (!string.IsNullOrWhiteSpace(keyVaultUri))
+{
+    builder.Configuration.AddAzureKeyVault(
+        new Uri(keyVaultUri),
+        new Azure.Identity.DefaultAzureCredential());
+}
+
 builder.Host.UseSerilog((context, services, loggerConfig) => loggerConfig
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
@@ -238,6 +255,7 @@ builder.Services.AddAuthorization(options =>
     }
 });
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddScoped<
     ICurrentUser,

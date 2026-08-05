@@ -74,15 +74,18 @@ Point your platform's probes at:
 
 ## 6. Backups
 
-Not automated by this repo - set up your database platform's own
-backup/retention policy (e.g. Azure SQL automated backups, RDS
-snapshots, or a scheduled `sqlcmd`/`sqlpackage` export if
-self-hosting). At minimum:
-
-- Automated daily backups, retained 30 days.
-- Point-in-time recovery if your platform supports it (most managed
-  SQL Server offerings do).
-- Test a restore at least once before you need it for real.
+- **Managed database (Azure SQL, RDS SQL Server, ...):** use the
+  platform's own automated backup / point-in-time recovery - it's more
+  robust than anything this repo could script, and usually already on
+  by default. Just confirm the retention window meets your needs.
+- **Self-hosted SQL Server (a VM, on-prem, the docker-compose setup):**
+  nothing does this for you automatically. Use `deploy/backup-database.ps1`,
+  scheduled daily via Windows Task Scheduler or cron (`pwsh
+  deploy/backup-database.ps1 -ServerInstance ... -BackupDirectory ...
+  -SaPassword ...`). Defaults to 30-day retention.
+- Either way: **test a restore at least once** before you need it for
+  real - an untested backup is not a backup. The script's doc comment
+  includes a `RESTORE DATABASE` example.
 
 ## 7. Rollback
 
