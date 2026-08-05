@@ -4,12 +4,12 @@ describe('ToastService', () => {
   let service: ToastService;
 
   beforeEach(() => {
-    jasmine.clock().install();
+    vi.useFakeTimers();
     service = new ToastService();
   });
 
   afterEach(() => {
-    jasmine.clock().uninstall();
+    vi.useRealTimers();
   });
 
   it('starts with no toasts', () => {
@@ -55,7 +55,7 @@ describe('ToastService', () => {
     service.success('رسالة مؤقتة');
     expect(service.toasts().length).toBe(1);
 
-    jasmine.clock().tick(4001);
+    vi.advanceTimersByTime(4001);
 
     expect(service.toasts().length).toBe(0);
   });

@@ -96,7 +96,7 @@ export class CheckoutComponent
   }
 
   @HostListener('document:keydown.enter', ['$event'])
-  onEnterKey(event: KeyboardEvent): void {
+  onEnterKey(event: Event): void {
     const target = event.target as HTMLElement | null;
     const isTypingInField =
       target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA';

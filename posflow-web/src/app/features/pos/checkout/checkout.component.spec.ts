@@ -1,4 +1,4 @@
-import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
@@ -140,28 +140,38 @@ describe('CheckoutComponent - cart and payment math', () => {
     expect(component.paymentLines[0].amount).toBe(0);
   });
 
-  it('debounces search filtering instead of filtering on every keystroke', fakeAsync(() => {
-    // Sets up the searchTerm$ debounce subscription (loadProducts()'s
-    // HTTP call is left unresolved on purpose - not what's under test
-    // here, and nothing asserts on it).
-    component.ngOnInit();
+  it('debounces search filtering instead of filtering on every keystroke', () => {
+    // This app is zoneless (no zone.js dependency), so fakeAsync/tick
+    // aren't available - RxJS's debounceTime still runs on real
+    // setTimeout/setInterval under the hood though, so Vitest's fake
+    // timers control it the same way.
+    vi.useFakeTimers();
 
-    component.products = [
-      buildProduct({ id: 'a', nameAr: 'شاي أحمر' }),
-      buildProduct({ id: 'b', nameAr: 'قهوة تركي' })
-    ];
+    try {
+      // Sets up the searchTerm$ debounce subscription (loadProducts()'s
+      // HTTP call is left unresolved on purpose - not what's under test
+      // here, and nothing asserts on it).
+      component.ngOnInit();
 
-    component.searchTerm = 'شاي';
-    component.onSearchChange();
+      component.products = [
+        buildProduct({ id: 'a', nameAr: 'شاي أحمر' }),
+        buildProduct({ id: 'b', nameAr: 'قهوة تركي' })
+      ];
 
-    // The 150ms debounce window hasn't elapsed yet.
-    expect(component.filteredProducts.length).toBe(0);
+      component.searchTerm = 'شاي';
+      component.onSearchChange();
 
-    tick(150);
+      // The 150ms debounce window hasn't elapsed yet.
+      expect(component.filteredProducts.length).toBe(0);
 
-    expect(component.filteredProducts.length).toBe(1);
-    expect(component.filteredProducts[0].id).toBe('a');
+      vi.advanceTimersByTime(150);
 
-    component.ngOnDestroy();
-  }));
+      expect(component.filteredProducts.length).toBe(1);
+      expect(component.filteredProducts[0].id).toBe('a');
+
+      component.ngOnDestroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
