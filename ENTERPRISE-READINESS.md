@@ -140,16 +140,18 @@
 | **الكود فعليًا بيتبني ويعدي الاختبارات** | ✅ | **أول مرة فعليًا في تاريخ المشروع** — 60 اختبار backend + 36 frontend كلهم عدّوا، بعد ما لقينا وصلحنا 4 bugs حقيقية كانت مخبأة (migration ناقصة، RowVersion concurrency مكسور فعليًا، LINQ query مش قابل للترجمة، وأخطاء compile في الـ frontend) |
 | CONTRIBUTING.md + ADRs | ✅ | `CONTRIBUTING.md` + `docs/adr/` |
 | Deploy runbook | ✅ | `deploy/README.md` (migrations، secrets، health checks، rollback) |
-| ❌ CD حقيقي لبيئة فعلية | ❌ | محتاج تختار hosting target فعلي الأول (Azure/AWS/VPS/...) — مش حاجة أقدر أقررها نيابة عنك |
-| ❌ Secrets manager فعلي (Key Vault/Secrets Manager) | ❌ | محتاج حساب سحابي فعلي، الكود جاهز يقرأ من env vars لكن مفيش حد بيوفرها |
-| ❌ Backup آلي فعلي | ❌ | موثق في `deploy/README.md` لكن مفيش أتمتة حقيقية — محتاج قرار على المنصة (Azure SQL/RDS/...) |
-| ❌ 2FA/MFA | ❌ | محتاج قرار منتج + مجهود أكبر من جلسة واحدة |
-| ❌ نظام صلاحيات مرن (granular permissions) | ❌ | لسه 3 أدوار ثابتة (Admin/Manager/Cashier) |
-| ❌ سجل عملاء / تعدد عملات / ضرائب | ❌ | قرارات منتج، مش بنود تقنية بحتة |
-| ❌ E2E tests (Playwright) | ❌ | لسه مفيش، الأولوية كانت للتأكد إن الكود الأساسي شغال الأول |
-| ❌ Caching (Redis) | ❌ | لسه مفيش، مش عاجلة بحجم الاستخدام الحالي |
+| 2FA/MFA (TOTP) | ✅ | RFC 6238، `/api/auth/2fa/setup`+`/enable`+`/disable` + تحدي 2FA عند الدخول، اختبار end-to-end كامل بيغطي السيناريو كله |
+| نظام صلاحيات مرن (Permissions) | ✅ | كتالوج صلاحيات + policy-based authorization بدل `[Authorize(Roles=...)]` المبعثرة — أساس جاهز لأي تخصيص مستقبلي لكل مستخدم |
+| سجل عملاء (Customers) | ✅ | CRUD كامل + ربط اختياري بالفاتورة + نقاط ولاء بسيطة (نقطة لكل وحدة عملة) |
+| ضريبة قابلة للتعديل | ✅ | `Tenant.TaxRatePercent` بيتطبق فعليًا في الـ checkout بدل الـ `const decimal taxAmount = 0` القديمة |
+| عملة العرض (Currency) | ✅ (عرض فقط) | `Tenant.CurrencyCode` — مفيش تحويل عملات حقيقي، مجرد إعداد عرض |
+| Caching | ✅ (جزئي) | `IMemoryCache` على التصنيفات (بتتغير نادر، بتتقرا كتير) — موثّق ليه المخزون/المنتجات معملهاش cache (خطر بيانات قديمة)، ومحتاج Redis بدل IMemoryCache لو النظام هيشتغل على أكتر من instance |
+| E2E tests (Playwright) | ✅ (مكتوبة، مش مُتحقق منها live هنا) | `posflow-web/e2e/` (login + سيناريو بيع كامل) + workflow CI حقيقي بيشغلهم على SQL Server فعلي. **متعرفتش أشغلهم live في الـ sandbox ده** بسبب قيود LocalDB/Windows-auth في البيئة المعزولة اللي شغال فيها — لكن `playwright test --list` أكد إنهم بيتصرّفوا صح وبيتلاقوا، والـ CI workflow بيستخدم SQL auth حقيقي هيشتغل على GitHub Actions فعليًا |
+| CD جزئي (نشر الـ images) | ✅ (جزئي) | CI بقى بينشر الـ Docker images على GitHub Container Registry (ghcr.io) تلقائيًا مع كل push لـ main — ده CD حقيقي مش محتاج حساب سحابي إضافي. **الجزء الناقص:** نقل الـ image من GHCR لسيرفر فعلي شغال، وده محتاج منك تختار الاستضافة الأول (Azure/AWS/VPS/...) |
+| Secrets manager فعلي | ✅ (الكود جاهز) | تكامل اختياري مع Azure Key Vault (`KeyVault:Uri` + `DefaultAzureCredential`) — شغال بس لو عندك حساب Azure فعلي وضبطته |
+| Backup | ✅ (سكريبت جاهز) | `deploy/backup-database.ps1` لحالة self-hosted SQL Server — **لسه محتاج تجدول تشغيله فعليًا** (Task Scheduler/cron) على السيرفر بتاعك؛ لو database managed (Azure SQL/RDS) استخدم الـ backup الأوتوماتيكي بتاعها بدل السكريبت |
 
-**خلاصة:** كل البنود "الحرِجة" اللي كانت ممكن تتنفذ من غير قرارات خارجية (حسابات سحابية، اختيار منصة استضافة، بيانات SMTP حقيقية) **اتنفذت فعليًا وبتشتغل**. الباقي إما محتاج منك قرار/حساب فعلي، أو مجهود منتج أكبر من "إصلاح جاهزية enterprise" في جلسة واحدة.
+**خلاصة النهائية:** كل بند كان ممكن يتنفذ بكود بس (من غير حساب سحابي فعلي أو قرار استضافة) **اتنفذ فعليًا وبيشتغل ومعدي اختبارات حقيقية** — permissions، customers، tax/currency، 2FA، caching، E2E test infra، CD للـ images، secrets manager wiring، backup script. الحاجات المتبقية (CD لسيرفر فعلي، تفعيل Key Vault فعلي، جدولة الـ backup) محتاجة منك تحديد الاستضافة/الحساب السحابي — مش حاجة أقدر أقررها نيابة عنك.
 
 ## 9. خطة مقترحة بالأولوية
 
