@@ -1,5 +1,7 @@
 # Contributing to PosFlow
 
+Repo: https://github.com/Mostafaessam7/POSFlow
+
 ## Getting set up
 
 Backend:

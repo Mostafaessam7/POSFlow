@@ -32,4 +32,10 @@ public sealed class AppUser : BaseEntity
 
     /// <summary>Base32-encoded TOTP secret. Null until the user completes 2FA setup. Never returned by any API response.</summary>
     public string? TwoFactorSecret { get; set; }
+
+    /// <summary>Consecutive failed password checks since the last successful login. Reset to 0 on success.</summary>
+    public int FailedLoginAttempts { get; set; }
+
+    /// <summary>Set once <see cref="FailedLoginAttempts"/> crosses the lockout threshold. Null when the account isn't locked. Login is rejected while this is in the future, regardless of password correctness.</summary>
+    public DateTime? LockoutEndUtc { get; set; }
 }

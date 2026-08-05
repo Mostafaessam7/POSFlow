@@ -1,7 +1,8 @@
 # PosFlow — تقييم الجاهزية لمستوى Enterprise
 
-**تاريخ المراجعة:** 5 أغسطس 2026 (آخر تحديث: نفس اليوم، بعد تنفيذ دفعة إصلاحات)
+**تاريخ المراجعة:** 5 أغسطس 2026 (آخر تحديث: نفس اليوم، بعد تنفيذ دفعة إصلاحات + جولة تنظيف توثيق ثانية)
 **بناءً على:** فحص فعلي للكود في `src/`, `posflow-web/`, `tests/`, `.github/` (وليس فقط على `HANDOVER.md`)
+**GitHub:** https://github.com/Mostafaessam7/POSFlow
 
 > **تحديث:** بعد كتابة هذا التقرير، تم تنفيذ أغلب البنود "الحرِجة" و"المهمة" فعليًا في نفس الجلسة. راجع قسم **"0.1 اللي اتعمل فعليًا"** تحت مباشرة لمعرفة الحالة الحالية، والبنود المتبقية موضحة بعلامة ❌ في الجداول تحت.
 
@@ -11,10 +12,11 @@
 
 ## 0. الخلاصة السريعة
 
-المشروع بنيته الأساسية كويسة فعلاً (Clean Architecture، multi-tenant من الأول، FluentValidation، rate limiting، health checks، global exception handler). لكنه لسه **prototype قوي**، مش enterprise. أكبر فجوتين خطيرتين:
+المشروع بنيته الأساسية كويسة فعلاً (Clean Architecture، multi-tenant من الأول، FluentValidation، rate limiting، health checks، global exception handler). لكنه لسه **prototype قوي**، مش enterprise بعد. أكبر فجوة متبقية:
 
-1. **لا يوجد git repo أصلاً** (`git status` بيقول "not a git repository"). من غير Git مفيش تاريخ تغييرات، مفيش code review حقيقي، مفيش rollback آمن، و الـ CI اللي مكتوب في `.github/workflows/ci.yml` مش هيشتغل أصلاً لأنه محتاج repo على GitHub.
-2. **عزل الـ Tenant يدوي مش تلقائي** — كل query لازم المبرمج يكتب `.Where(x => x.TenantId == _currentUser.TenantId)` بنفسه (شوف `ProductService.cs`). نسيان سطر واحد زي ده في أي endpoint جديد = **تسريب بيانات بين tenants**، وهي أخطر مشكلة ممكن تحصل في نظام multi-tenant.
+- **الريبو لسه مش متربط بـ remote في كل بيئة عمل.** الكود موجود على GitHub فعليًا (https://github.com/Mostafaessam7/POSFlow)، لكن لو لقيت `git status` بيقول "not a git repository" في نسخة معينة من المجلد، معناه إنها نسخة محلية لسه محتاجة `git init` + ربط الـ remote — راجع تعليمات الإعداد في `README.md`. من غير ده الـ CI في `.github/workflows/ci.yml` مش هيشتغل فعليًا لأنه محتاج push حقيقي على GitHub.
+
+**الفجوة الحرجة التانية كانت عزل الـ Tenant اليدوي — دي **اتحلت** فعليًا (تحويلها لـ EF Core Global Query Filter + اختبار تلقائي)، شوف تفصيلها في §0.1 و§5 تحت.**
 
 ---
 
@@ -26,7 +28,7 @@
 | **auto-migrate على الإقلاع** | `Program.cs` بينادي `DatabaseSeeder.SeedAsync` اللي بيعمل `Database.MigrateAsync()` **في كل مرة يشتغل فيها الـ app**، بما فيها production. | في enterprise، الـ migrations لازم تتشغل كخطوة منفصلة في الـ deployment pipeline (`dotnet ef database update` أو migration bundle)، مش أوتوماتيك عند كل boot — عشان تتجنب race conditions لو شغال أكتر من instance، ولازم يكون فيه مراجعة/موافقة قبل أي schema change في production. |
 | **الأسرار في appsettings.json** | `Jwt:Key` قيمة افتراضية ثابتة في الملف (`PosFlow-Development-Key-Change-Me-2026...`)، والـ connection string كمان. | لازم Azure Key Vault / AWS Secrets Manager / environment variables، وممنوع أي سر حقيقي يتحط في ملف بيتراجع في git. |
 | **مفيش secrets scanning / dependency scanning** | الـ CI الحالي بيعمل build + test بس. | ضيف `dotnet list package --vulnerable`, `npm audit`, وأداة زي Gitleaks/Trivy/Dependabot. |
-| **مفيش account lockout بعد محاولات فاشلة** | فيه rate limiting بالـ IP بس (5 محاولات/دقيقة) — ده يحمي من brute force بسيط بس مش من محاولات موزعة (distributed) على حسابات معينة. | ضيف lockout على مستوى الحساب بعد X محاولة فاشلة + تنبيه للمستخدم بالإيميل. |
+| **مفيش account lockout بعد محاولات فاشلة** | ✅ اتحل — `AppUser.FailedLoginAttempts`/`LockoutEndUtc`، 5 محاولات فاشلة متتالية = قفل 15 دقيقة، بغض النظر عن الـ IP (دفاع ضد محاولات موزعة على حساب معين، بالإضافة لـ rate limiting بالـ IP الموجود أصلاً). مغطى باختبارات `AuthServiceLockoutTests`. | تنبيه إيميل للمستخدم عند القفل لسه مش موجود — تحسين مستقبلي بسيط. |
 | **مفيش 2FA/MFA** | مفيش أي طبقة تحقق ثانية، حتى للـ Admin. | مهم جدًا لأي نظام بيتعامل مع مبيعات وفلوس فعلية، الأقل للـ Admin role. |
 | **Refresh tokens** | موجودة، بس لازم تتأكد إن فيه rotation + revocation list (خصوصًا لو جهاز اتسرق). | راجع `AuthService.cs` تتأكد إن كل refresh بيلغي التوكن القديم فعليًا مش بس بيصدر جديد. |
 | **مفيش Audit Log** | مفيش جدول يسجل "مين عمل إيه وإمتى" (تعديل سعر، حذف منتج، void لأوردر، تغيير صلاحيات مستخدم). | أساسي لأي نظام مالي/enterprise لأسباب قانونية ومحاسبية. |
@@ -123,7 +125,7 @@
 
 | البند | الحالة | ملاحظة |
 |---|---|---|
-| Git repo | ✅ | `git init` + أول 5 commits، تاريخ تغييرات حقيقي دلوقتي |
+| Git repo | ✅ | مربوط بـ https://github.com/Mostafaessam7/POSFlow — تاريخ تغييرات حقيقي وCI شغال فعليًا على push |
 | عزل Tenant تلقائي (Global Query Filter) | ✅ | + اختبارات `TenantIsolationTests` تثبت إن الحماية شغالة حتى لو نسي أي service الفلتر اليدوي |
 | Auto-migrate في production | ✅ (اتقفل) | بقى config-gated (`App:AutoMigrateOnStartup`)، مقفول افتراضيًا بره Development |
 | Admin password ثابتة (`Admin@123`) في أي بيئة | ✅ (اتحل) | Production بقى عنده bootstrap منفصل بيعمل password عشوائي مرة واحدة ويطبعه في الـ logs |
@@ -137,7 +139,8 @@
 | Health checks | ✅ | `/health/live` و `/health/ready` منفصلين دلوقتي |
 | Rate limiting على كل الـ API | ✅ | مش بس auth — فيه global limiter دلوقتي (120 طلب/دقيقة لكل مستخدم/IP) |
 | Security headers | ✅ | + CSP و HSTS (بره Development) |
-| **الكود فعليًا بيتبني ويعدي الاختبارات** | ✅ | **أول مرة فعليًا في تاريخ المشروع** — 60 اختبار backend + 36 frontend كلهم عدّوا، بعد ما لقينا وصلحنا 4 bugs حقيقية كانت مخبأة (migration ناقصة، RowVersion concurrency مكسور فعليًا، LINQ query مش قابل للترجمة، وأخطاء compile في الـ frontend) |
+| **الكود فعليًا بيتبني ويعدي الاختبارات** | ✅ | 66 اختبار backend + 36 frontend كلهم عدّوا (اتحقق منهم فعليًا `dotnet build` + `dotnet test` + `ng test`)، بعد ما لقينا وصلحنا 4 bugs حقيقية كانت مخبأة (migration ناقصة، RowVersion concurrency مكسور فعليًا، LINQ query مش قابل للترجمة، وأخطاء compile في الـ frontend) |
+| Account lockout بعد محاولات فاشلة | ✅ | 5 محاولات فاشلة متتالية = قفل 15 دقيقة على الحساب نفسه، مستقل عن الـ IP — دفاع إضافي فوق rate limiting بالـ IP الموجود أصلاً على `/api/auth/*` |
 | CONTRIBUTING.md + ADRs | ✅ | `CONTRIBUTING.md` + `docs/adr/` |
 | Deploy runbook | ✅ | `deploy/README.md` (migrations، secrets، health checks، rollback) |
 | 2FA/MFA (TOTP) | ✅ | RFC 6238، `/api/auth/2fa/setup`+`/enable`+`/disable` + تحدي 2FA عند الدخول، اختبار end-to-end كامل بيغطي السيناريو كله |
