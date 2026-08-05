@@ -29,6 +29,9 @@ jobs:
       - name: Test
         run: dotnet test PosFlow.slnx --no-build --configuration Release --verbosity normal
 
+      - name: Check for known-vulnerable NuGet packages
+        run: dotnet list PosFlow.slnx package --vulnerable --include-transitive
+
   frontend:
     name: Frontend (build + test)
     runs-on: ubuntu-latest
@@ -52,10 +55,34 @@ jobs:
         run: npm ci
 
       - name: Test
-        # Adjust flags here if your Angular version's test runner
-        # needs different ones (e.g. --browsers=ChromeHeadless for a
-        # Karma-based setup).
         run: npm test -- --watch=false
 
       - name: Build
-        run: npm run build
+        run: npm run build -- --configuration production
+
+      - name: Audit dependencies for known vulnerabilities
+        # --audit-level=high: fails the build on High/Critical findings
+        # without blocking on every low-severity transitive advisory.
+        # Tighten this once the project has a process to triage lower
+        # severities regularly.
+        run: npm audit --audit-level=high
+
+  docker-build:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    needs: [ backend, frontend ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -f src/PosFlow.Api/Dockerfile -t posflow-api:ci .
+
+      - name: Build web image
+        run: docker build -t posflow-web:ci ./posflow-web
+
+  # No deploy job yet - wire this up once there's a real hosting target
+  # (Azure App Service, ECS, a VM, etc.). See deploy/README.md for what
+  # a production deploy needs to do (migrations as an explicit step,
+  # real secrets, etc.) before adding one here.

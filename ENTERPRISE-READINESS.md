@@ -1,7 +1,9 @@
 # PosFlow — تقييم الجاهزية لمستوى Enterprise
 
-**تاريخ المراجعة:** 5 أغسطس 2026
+**تاريخ المراجعة:** 5 أغسطس 2026 (آخر تحديث: نفس اليوم، بعد تنفيذ دفعة إصلاحات)
 **بناءً على:** فحص فعلي للكود في `src/`, `posflow-web/`, `tests/`, `.github/` (وليس فقط على `HANDOVER.md`)
+
+> **تحديث:** بعد كتابة هذا التقرير، تم تنفيذ أغلب البنود "الحرِجة" و"المهمة" فعليًا في نفس الجلسة. راجع قسم **"0.1 اللي اتعمل فعليًا"** تحت مباشرة لمعرفة الحالة الحالية، والبنود المتبقية موضحة بعلامة ❌ في الجداول تحت.
 
 هذا الملف يكمّل `HANDOVER.md` — ذاك يشرح "إيه اللي اتعمل"، وده يشرح **"إيه الناقص عشان نعتبره enterprise-grade"**، مرتب حسب الأولوية.
 
@@ -114,6 +116,40 @@
   - **دليل مساهمة (CONTRIBUTING.md)** وقواعد coding standards موثقة (فيه `.editorconfig` بس مفيش شرح مكتوب).
 
 ---
+
+## 0.1 اللي اتعمل فعليًا (تحديث لاحق لنفس اليوم)
+
+✅ = خلص وموجود في الكود دلوقتي. ❌ = لسه ناقص (سواء لأنه محتاج قرار منك، أو حساب/خدمة خارجية، أو مجهود أكبر من جلسة واحدة).
+
+| البند | الحالة | ملاحظة |
+|---|---|---|
+| Git repo | ✅ | `git init` + أول 5 commits، تاريخ تغييرات حقيقي دلوقتي |
+| عزل Tenant تلقائي (Global Query Filter) | ✅ | + اختبارات `TenantIsolationTests` تثبت إن الحماية شغالة حتى لو نسي أي service الفلتر اليدوي |
+| Auto-migrate في production | ✅ (اتقفل) | بقى config-gated (`App:AutoMigrateOnStartup`)، مقفول افتراضيًا بره Development |
+| Admin password ثابتة (`Admin@123`) في أي بيئة | ✅ (اتحل) | Production بقى عنده bootstrap منفصل بيعمل password عشوائي مرة واحدة ويطبعه في الـ logs |
+| Structured logging | ✅ | Serilog (console + rolling JSON files + request logging) |
+| Audit log | ✅ | جدول `AuditLogs` بيسجل كل تعديل/حذف/إضافة على Order/Product/AppUser/Branch/Shift تلقائيًا |
+| إيميل حقيقي | ✅ (تقنيًا) | `SmtpEmailSender` جاهز، بس **لازم تحط بيانات SMTP حقيقية بنفسك** (API key فعلي) — مينفعش حد يعمل ده نيابة عنك |
+| Secrets في appsettings | ✅ (اتنضف) | `appsettings.json` بقى بدون قيم حقيقية + `.env.example` كامل |
+| Dockerfile / docker-compose | ✅ | API + Angular (nginx) + SQL Server، للتطوير المحلي أساسًا |
+| CI: vulnerability scanning | ✅ | `dotnet list package --vulnerable` + `npm audit` في الـ workflow |
+| CI: Docker build check | ✅ | build فقط (بدون push) للتأكد إن الـ Dockerfiles شغالة |
+| Health checks | ✅ | `/health/live` و `/health/ready` منفصلين دلوقتي |
+| Rate limiting على كل الـ API | ✅ | مش بس auth — فيه global limiter دلوقتي (120 طلب/دقيقة لكل مستخدم/IP) |
+| Security headers | ✅ | + CSP و HSTS (بره Development) |
+| **الكود فعليًا بيتبني ويعدي الاختبارات** | ✅ | **أول مرة فعليًا في تاريخ المشروع** — 60 اختبار backend + 36 frontend كلهم عدّوا، بعد ما لقينا وصلحنا 4 bugs حقيقية كانت مخبأة (migration ناقصة، RowVersion concurrency مكسور فعليًا، LINQ query مش قابل للترجمة، وأخطاء compile في الـ frontend) |
+| CONTRIBUTING.md + ADRs | ✅ | `CONTRIBUTING.md` + `docs/adr/` |
+| Deploy runbook | ✅ | `deploy/README.md` (migrations، secrets، health checks، rollback) |
+| ❌ CD حقيقي لبيئة فعلية | ❌ | محتاج تختار hosting target فعلي الأول (Azure/AWS/VPS/...) — مش حاجة أقدر أقررها نيابة عنك |
+| ❌ Secrets manager فعلي (Key Vault/Secrets Manager) | ❌ | محتاج حساب سحابي فعلي، الكود جاهز يقرأ من env vars لكن مفيش حد بيوفرها |
+| ❌ Backup آلي فعلي | ❌ | موثق في `deploy/README.md` لكن مفيش أتمتة حقيقية — محتاج قرار على المنصة (Azure SQL/RDS/...) |
+| ❌ 2FA/MFA | ❌ | محتاج قرار منتج + مجهود أكبر من جلسة واحدة |
+| ❌ نظام صلاحيات مرن (granular permissions) | ❌ | لسه 3 أدوار ثابتة (Admin/Manager/Cashier) |
+| ❌ سجل عملاء / تعدد عملات / ضرائب | ❌ | قرارات منتج، مش بنود تقنية بحتة |
+| ❌ E2E tests (Playwright) | ❌ | لسه مفيش، الأولوية كانت للتأكد إن الكود الأساسي شغال الأول |
+| ❌ Caching (Redis) | ❌ | لسه مفيش، مش عاجلة بحجم الاستخدام الحالي |
+
+**خلاصة:** كل البنود "الحرِجة" اللي كانت ممكن تتنفذ من غير قرارات خارجية (حسابات سحابية، اختيار منصة استضافة، بيانات SMTP حقيقية) **اتنفذت فعليًا وبتشتغل**. الباقي إما محتاج منك قرار/حساب فعلي، أو مجهود منتج أكبر من "إصلاح جاهزية enterprise" في جلسة واحدة.
 
 ## 9. خطة مقترحة بالأولوية
 
