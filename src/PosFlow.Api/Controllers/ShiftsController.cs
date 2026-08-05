@@ -45,7 +45,7 @@ public sealed class ShiftsController(
         return Ok(shifts);
     }
 
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Permissions.ShiftsViewBranchHistory)]
     [HttpGet("branch-history")]
     public async Task<ActionResult<PagedResult<ShiftResponse>>>
         GetBranchHistory(

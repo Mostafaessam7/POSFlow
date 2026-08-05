@@ -1,11 +1,12 @@
 using PosFlow.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PosFlow.Application.Common;
 using PosFlow.Application.Reports;
 
 namespace PosFlow.Api.Controllers;
 
-[Authorize(Roles = Roles.AdminOrManager)]
+[Authorize(Policy = Permissions.ReportsView)]
 [ApiController]
 [Route("api/reports")]
 public sealed class ReportsController(

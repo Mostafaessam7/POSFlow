@@ -9,6 +9,7 @@ public sealed record OrderResponse(
     decimal TaxAmount,
     decimal TotalAmount,
     decimal ChangeDue,
+    Guid? CustomerId,
     DateTime CreatedAtUtc,
     string? VoidReason,
     DateTime? VoidedAtUtc,

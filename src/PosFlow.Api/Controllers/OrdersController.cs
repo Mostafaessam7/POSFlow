@@ -80,6 +80,7 @@ public sealed class OrdersController(
             order);
     }
 
+    [Authorize(Policy = Permissions.OrdersVoid)]
     [HttpPost("{id:guid}/void")]
     public async Task<ActionResult<OrderResponse>> Void(
         Guid id,

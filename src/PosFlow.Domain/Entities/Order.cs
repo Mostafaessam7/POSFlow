@@ -15,6 +15,8 @@ public sealed class Order : BaseEntity
 
     public Guid ShiftId { get; set; }
 
+    public Guid? CustomerId { get; set; }
+
     public string OrderNumber { get; set; } = null!;
 
     public OrderStatus Status { get; set; } = OrderStatus.Draft;

@@ -26,4 +26,10 @@ public sealed class AppUser : BaseEntity
     public UserRole Role { get; set; } = UserRole.Cashier;
 
     public bool IsActive { get; set; } = true;
+
+    /// <summary>TOTP (RFC 6238) two-factor auth - off by default, opt-in per user. Strongly recommended for Admin accounts.</summary>
+    public bool TwoFactorEnabled { get; set; }
+
+    /// <summary>Base32-encoded TOTP secret. Null until the user completes 2FA setup. Never returned by any API response.</summary>
+    public string? TwoFactorSecret { get; set; }
 }

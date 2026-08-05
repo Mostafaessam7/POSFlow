@@ -53,7 +53,7 @@ public sealed class ProductsController(
         return Ok(product);
     }
 
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Permissions.ProductsWrite)]
     [HttpPost]
     public async Task<ActionResult<ProductResponse>> Create(
         CreateProductRequest request,
@@ -69,7 +69,7 @@ public sealed class ProductsController(
             product);
     }
 
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Permissions.ProductsWrite)]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ProductResponse>> Update(
         Guid id,
@@ -84,7 +84,7 @@ public sealed class ProductsController(
         return Ok(product);
     }
 
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Permissions.ProductsWrite)]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Deactivate(
         Guid id,

@@ -1,11 +1,12 @@
 using PosFlow.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PosFlow.Application.Common;
 using PosFlow.Application.Users;
 
 namespace PosFlow.Api.Controllers;
 
-[Authorize(Roles = Roles.Admin)]
+[Authorize(Policy = Permissions.UsersManage)]
 [ApiController]
 [Route("api/users")]
 public sealed class UsersController(
