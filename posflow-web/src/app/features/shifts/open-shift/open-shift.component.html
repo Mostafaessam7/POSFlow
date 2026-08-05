@@ -101,6 +101,7 @@
           [disabled]="isSubmitting">
 
           @if (isSubmitting) {
+            <span class="spinner" aria-hidden="true"></span>
             جاري فتح الوردية...
           } @else {
             فتح الوردية
@@ -165,6 +166,7 @@
           [disabled]="isSubmitting">
 
           @if (isSubmitting) {
+            <span class="spinner" aria-hidden="true"></span>
             جاري إغلاق الوردية...
           } @else {
             إغلاق الوردية
