@@ -1,6 +1,6 @@
 # PosflowWeb
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.6.
+Angular frontend for [PosFlow](../README.md) ([GitHub](https://github.com/Mostafaessam7/POSFlow)). Generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.6.
 
 ## Development server
 
@@ -46,13 +46,11 @@ ng test
 
 ## Running end-to-end tests
 
-For end-to-end (e2e) testing, run:
+E2E tests use Playwright, not the `ng e2e` scaffold command — see [`e2e/README.md`](e2e/README.md) for how to run them (they need a real backend + SQL Server, unlike the unit tests above):
 
 ```bash
-ng e2e
+npm run test:e2e
 ```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
 
 ## Additional Resources
 

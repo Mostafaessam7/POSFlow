@@ -25,6 +25,8 @@ public sealed class AuthService(
 {
     private const int PasswordResetTokenExpirationMinutes = 30;
     private const int TwoFactorChallengeExpirationMinutes = 5;
+    private const int MaxFailedLoginAttempts = 5;
+    private const int LockoutDurationMinutes = 15;
 
     private readonly PosFlowDbContext _dbContext = dbContext;
     private readonly IPasswordHasher<AppUser> _passwordHasher = passwordHasher;
@@ -51,6 +53,12 @@ public sealed class AuthService(
             return null;
         }
 
+        if (user.LockoutEndUtc is { } lockoutEnd && lockoutEnd > DateTime.UtcNow)
+        {
+            throw new UnauthorizedAccessException(
+                $"الحساب مقفول مؤقتًا بسبب محاولات دخول فاشلة متكررة. حاول تاني بعد {LockoutDurationMinutes} دقيقة.");
+        }
+
         var verificationResult =
             _passwordHasher.VerifyHashedPassword(
                 user,
@@ -59,8 +67,25 @@ public sealed class AuthService(
 
         if (verificationResult == PasswordVerificationResult.Failed)
         {
+            user.FailedLoginAttempts++;
+
+            if (user.FailedLoginAttempts >= MaxFailedLoginAttempts)
+            {
+                user.LockoutEndUtc = DateTime.UtcNow.AddMinutes(LockoutDurationMinutes);
+                user.FailedLoginAttempts = 0;
+            }
+
+            user.UpdatedAtUtc = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
             return null;
         }
+
+        // A successful password check clears any prior failure streak,
+        // whether or not it happened to also be the attempt that
+        // crossed the lockout threshold moments earlier.
+        user.FailedLoginAttempts = 0;
+        user.LockoutEndUtc = null;
 
         if (verificationResult ==
             PasswordVerificationResult.SuccessRehashNeeded)

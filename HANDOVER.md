@@ -2,8 +2,9 @@
 
 **Last updated:** 28 July 2026
 **Prepared by:** Claude (Anthropic), across an extended pairing session with the project owner.
+**GitHub:** https://github.com/Mostafaessam7/POSFlow
 
-This document is the single reference for anyone picking up PosFlow after this session — what it is, what's been built, how to apply the work, what's still missing, and what to do first.
+This document is a historical record of what was built and why, as of the session that produced it. **It is not the current status doc** — a lot has changed since (git repo, tenant isolation as an EF Core global filter, 2FA, permissions, audit log, account lockout, and more). For the up-to-date picture of what's actually done vs. still missing, read [`ENTERPRISE-READINESS.md`](ENTERPRISE-READINESS.md) first, then come back here for the "why" behind the original build.
 
 ---
 
@@ -91,18 +92,19 @@ None of this code has been compiled or run — it was all written without access
 
 ---
 
-## 5. Known limitations (honest list)
+## 5. Known limitations (honest list, as of 28 July)
 
-These were explicitly identified and deliberately deferred, not overlooked:
+These were explicitly identified and deliberately deferred, not overlooked. **Several of these have since been resolved** — see the inline "(resolved — ...)" notes below and [`ENTERPRISE-READINESS.md`](ENTERPRISE-READINESS.md) §0.1 for the current, verified state of each.
 
-- **Email is not actually sent.** `LoggingEmailSender` (the default `IEmailSender`) logs the reset link instead of emailing it. Replace the DI registration in `Program.cs` with a real provider (SendGrid, SES, SMTP/MailKit) before relying on forgot-password in production.
-- **No receipt printing/PDF export** — the checkout success card is on-screen only.
-- **No barcode-scanner-optimized lookup endpoint** — a scanner that types a barcode + Enter would currently just filter the in-memory product list client-side, which is fine at small catalog sizes but not built for scale.
-- **No order-level discounts or tax configuration** — discounts are per-line only; tax is hardcoded to 0.
-- **No customer records** — every sale is anonymous.
-- **Stock has no adjustment/audit trail** — `StockQuantity` is just a number editors can overwrite directly, no "received 50 units on X" history.
-- **No E2E browser tests** (Playwright/Cypress) — all test coverage is unit + API-integration level, nothing clicks through the actual rendered UI.
-- **Order-number collision retry logic is untested** — hard to force a genuine unique-constraint race deterministically against EF Core's InMemory provider, so this path (real, but rare) has no automated test.
+- **Email is not actually sent.** `LoggingEmailSender` (the default `IEmailSender`) logs the reset link instead of emailing it. Replace the DI registration in `Program.cs` with a real provider (SendGrid, SES, SMTP/MailKit) before relying on forgot-password in production. *(resolved in code — `SmtpEmailSender` exists; still needs real SMTP credentials supplied by the project owner, which no assistant can do on their behalf.)*
+- **No receipt printing/PDF export** — the checkout success card is on-screen only. *(still open)*
+- **No barcode-scanner-optimized lookup endpoint** — a scanner that types a barcode + Enter would currently just filter the in-memory product list client-side, which is fine at small catalog sizes but not built for scale. *(still open)*
+- **No order-level discounts or tax configuration** — discounts are per-line only; tax is hardcoded to 0. *(resolved — `Tenant.TaxRatePercent` is now applied at checkout.)*
+- **No customer records** — every sale is anonymous. *(resolved — `Customer` CRUD + optional order linkage + simple loyalty points.)*
+- **Stock has no adjustment/audit trail** — `StockQuantity` is just a number editors can overwrite directly, no "received 50 units on X" history. *(still open — the general `AuditLog` now covers Product field changes including StockQuantity, but there's no dedicated stock-movement ledger.)*
+- **No E2E browser tests** (Playwright/Cypress) — all test coverage is unit + API-integration level, nothing clicks through the actual rendered UI. *(resolved — `posflow-web/e2e/` has Playwright specs for login and the core sale flow, run in CI against a real SQL Server service container.)*
+- **Order-number collision retry logic is untested** — hard to force a genuine unique-constraint race deterministically against EF Core's InMemory provider, so this path (real, but rare) has no automated test. *(still open)*
+- **No account lockout after repeated failed logins** — only IP-based rate limiting existed. *(resolved — 5 consecutive failures locks the account for 15 minutes, independent of the caller's IP; see `AuthService.LoginAsync`.)*
 
 ---
 

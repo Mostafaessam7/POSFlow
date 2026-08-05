@@ -71,6 +71,13 @@ public sealed class AuthEndpointTests : IDisposable
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    // Account-lockout-after-N-failures is covered at the AuthService
+    // unit level instead (AuthServiceLockoutTests), not here - the
+    // "auth" rate limit policy caps this endpoint at 5 requests/minute
+    // per IP (see Program.cs), so a test that fires 6 requests to
+    // trigger the lockout threshold would hit 429 before it could ever
+    // observe the lockout itself.
+
     [Fact]
     public async Task Refresh_WithGarbageToken_ReturnsUnauthorized()
     {
