@@ -1,0 +1,92 @@
+name: E2E
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  e2e:
+    name: Playwright E2E (real backend + real DB)
+    runs-on: ubuntu-latest
+
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "E2E_Test_Pw_123!"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'E2E_Test_Pw_123!' -Q 'SELECT 1'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: posflow-web/package-lock.json
+
+      - name: Start API against the mssql service container
+        working-directory: src/PosFlow.Api
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: http://localhost:5000
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=PosFlowE2E;User Id=sa;Password=E2E_Test_Pw_123!;TrustServerCertificate=True"
+        run: |
+          dotnet run &
+          echo "Waiting for API to come up..."
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5000/health && break
+            sleep 2
+          done
+
+      - name: Install frontend dependencies
+        working-directory: posflow-web
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: posflow-web
+        run: npx playwright install --with-deps chromium
+
+      - name: Start frontend dev server
+        working-directory: posflow-web
+        env:
+          # Dev server proxies /api to the API started above - see
+          # proxy.conf.json. Adjust if that file targets a different port.
+          E2E_BASE_URL: http://localhost:4200
+        run: |
+          npm start &
+          echo "Waiting for frontend to come up..."
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:4200 && break
+            sleep 2
+          done
+
+      - name: Run Playwright tests
+        working-directory: posflow-web
+        env:
+          E2E_BASE_URL: http://localhost:4200
+        run: npm run test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: posflow-web/playwright-report/
+          retention-days: 7
