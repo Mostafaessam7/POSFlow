@@ -4,6 +4,14 @@
   paper background, deep teal ("register green") for primary actions,
   a warm amber for money/highlights, and a monospace face reserved
   for order numbers and receipt-like figures.
+
+  This file is also where the shared interaction layer lives: buttons,
+  links, and cards across every page reuse the same class names
+  (.primary-button, .ghost-button, .danger-button, .badge, tables,
+  ...) but each component only defines colors/layout for them, not
+  hover/press/transition feedback - that's added once, here, so every
+  screen feels consistent and "alive" without repeating the same
+  handful of rules in a dozen component stylesheets.
 */
 
 :root {
@@ -46,6 +54,12 @@
   --radius-lg: 16px;
   --shadow-card: 0 8px 24px rgba(33, 31, 28, 0.06);
   --shadow-card-lg: 0 12px 35px rgba(33, 31, 28, 0.1);
+
+  /* Motion - one shared timing scale so every hover/press/fade feels
+     like the same product, not a pile of ad-hoc numbers. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
 }
 
 * {
@@ -73,6 +87,14 @@ textarea {
   color: inherit;
 }
 
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 /* Order numbers, receipt figures, and monetary totals read better in
    a tabular monospace - a small nod to the printed-receipt subject. */
 .font-mono,
@@ -85,4 +107,219 @@ textarea {
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------------------------------------------------------------- */
+/* Shared interaction layer                                          */
+/* ---------------------------------------------------------------- */
+
+/* Every button/input/select/textarea across the app gets the same
+   smooth feedback for state changes, instead of snapping instantly -
+   this alone is most of what makes an interface feel "smooth". */
+button,
+input,
+select,
+textarea,
+a {
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out),
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    color var(--duration-base) var(--ease-out);
+}
+
+/* A gentle press - the single highest-value "feels professional"
+   micro-interaction, and it's free: every button in the app already
+   uses plain <button> elements, so this applies everywhere at once. */
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* Centers label + an optional .spinner consistently, so adding a
+   loading spinner to any action button never needs per-component
+   layout tweaks. */
+.primary-button,
+.ghost-button,
+.danger-button,
+.checkout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.primary-button:not(:disabled):hover,
+.checkout-button:not(:disabled):hover {
+  filter: brightness(1.06);
+  box-shadow: var(--shadow-card);
+}
+
+.ghost-button:not(:disabled):hover {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+.danger-button:not(:disabled):hover {
+  filter: brightness(1.08);
+  box-shadow: var(--shadow-card);
+}
+
+.text-button:hover,
+.text-link:hover,
+.link-button:hover {
+  opacity: 1;
+}
+
+/* Inputs get a soft focus glow instead of an abrupt border-color
+   snap - reads calmer than a hard outline while staying clearly
+   visible for keyboard users (the global :focus-visible rule above
+   still applies on top of this for non-pointer navigation). */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+/* Any element opting into ".card" (or already using --shadow-card via
+   its own rules) lifts slightly on hover when it's also clickable -
+   scoped to elements that are actually interactive so plain display
+   cards don't wobble under the cursor for no reason. */
+.product-tile,
+tbody tr {
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.product-tile:not(.out-of-stock):active {
+  transform: scale(0.97);
+}
+
+table tbody tr:hover {
+  background: var(--color-surface-sunken);
+}
+
+/* Badges/pills get a hair more presence than a flat color block. */
+.badge {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+/* ---------------------------------------------------------------- */
+/* Page entrance                                                     */
+/* ---------------------------------------------------------------- */
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-page,
+.shift-page,
+.pos-page,
+.products-page,
+.dashboard-page,
+.users-page,
+.branches-page,
+.history-page {
+  animation: page-fade-in var(--duration-base) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/* Loading primitives - available to any component, no extra import  */
+/* ---------------------------------------------------------------- */
+
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: -0.15em;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-sm);
+  color: transparent !important;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/* Scrollbars - subtle, matches the palette instead of the OS default */
+/* ---------------------------------------------------------------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-muted-light);
 }

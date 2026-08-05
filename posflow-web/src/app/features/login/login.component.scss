@@ -70,6 +70,10 @@ button {
   color: var(--color-surface);
   font-size: 17px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 
   &:hover {
     opacity: 0.92;

@@ -155,6 +155,7 @@
             type="submit"
             [disabled]="isSaving">
             @if (isSaving) {
+              <span class="spinner" aria-hidden="true"></span>
               جاري الحفظ...
             } @else {
               حفظ

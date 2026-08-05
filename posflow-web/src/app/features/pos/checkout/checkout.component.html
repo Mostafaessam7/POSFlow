@@ -221,6 +221,7 @@
             [disabled]="isCheckingOut"
             (click)="checkout()">
             @if (isCheckingOut) {
+              <span class="spinner" aria-hidden="true"></span>
               جاري إتمام البيع...
             } @else {
               إتمام البيع
