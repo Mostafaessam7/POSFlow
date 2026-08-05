@@ -1,11 +1,12 @@
 using PosFlow.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PosFlow.Application.Common;
 using PosFlow.Application.Branches;
 
 namespace PosFlow.Api.Controllers;
 
-[Authorize(Roles = Roles.Admin)]
+[Authorize(Policy = Permissions.BranchesManage)]
 [ApiController]
 [Route("api/branches")]
 public sealed class BranchesController(

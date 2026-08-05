@@ -116,14 +116,53 @@ public sealed class OrderService(
             totalDiscount += lineRequest.DiscountAmount;
         }
 
-        const decimal taxAmount = 0;
-        var totalAmount = subtotal - totalDiscount + taxAmount;
+        // Flat tenant-configured VAT/sales tax rate (Tenant.TaxRatePercent,
+        // 0 by default - matches the previous hardcoded no-tax
+        // behaviour for tenants that haven't set one). Line-level
+        // TaxAmount stays 0 for now (no per-product tax categories) -
+        // only the order-level total carries the tax.
+        var taxRatePercent = await _dbContext.Tenants
+            .AsNoTracking()
+            .Where(x => x.Id == _currentUser.TenantId)
+            .Select(x => x.TaxRatePercent)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        var taxableAmount = subtotal - totalDiscount;
+        var taxAmount = Math.Round(
+            taxableAmount * taxRatePercent / 100m,
+            2,
+            MidpointRounding.AwayFromZero);
+
+        var totalAmount = taxableAmount + taxAmount;
         var paidAmount = request.Payments.Sum(x => x.Amount);
 
         if (paidAmount < totalAmount)
         {
             throw new InvalidOperationException(
                 "المبلغ المدفوع أقل من إجمالي الفاتورة.");
+        }
+
+        Customer? customer = null;
+
+        if (request.CustomerId.HasValue)
+        {
+            customer = await _dbContext.Customers
+                .SingleOrDefaultAsync(
+                    x =>
+                        x.Id == request.CustomerId.Value &&
+                        x.TenantId == _currentUser.TenantId,
+                    cancellationToken);
+
+            if (customer is null)
+            {
+                throw new KeyNotFoundException("العميل غير موجود.");
+            }
+
+            // 1 loyalty point per whole currency unit spent - simple
+            // and tenant-agnostic; a points-per-currency-unit setting
+            // can be added to Tenant later if shops want to tune it.
+            customer.LoyaltyPoints += (int)Math.Floor(totalAmount);
+            customer.UpdatedAtUtc = DateTime.UtcNow;
         }
 
         var payments = request.Payments
@@ -141,6 +180,7 @@ public sealed class OrderService(
             TenantId = _currentUser.TenantId,
             BranchId = _currentUser.BranchId,
             ShiftId = shift.Id,
+            CustomerId = customer?.Id,
             Status = OrderStatus.Completed,
             Subtotal = subtotal,
             DiscountAmount = totalDiscount,
@@ -424,6 +464,7 @@ public sealed class OrderService(
             TaxAmount: order.TaxAmount,
             TotalAmount: order.TotalAmount,
             ChangeDue: paidAmount - order.TotalAmount,
+            CustomerId: order.CustomerId,
             CreatedAtUtc: order.CreatedAtUtc,
             VoidReason: order.VoidReason,
             VoidedAtUtc: order.VoidedAtUtc,

@@ -2,6 +2,7 @@ using PosFlow.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PosFlow.Application.Categories;
+using PosFlow.Application.Common;
 
 namespace PosFlow.Api.Controllers;
 
@@ -24,7 +25,7 @@ public sealed class CategoriesController(
         return Ok(categories);
     }
 
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Permissions.CategoriesWrite)]
     [HttpPost]
     public async Task<ActionResult<CategoryResponse>> Create(
         CreateCategoryRequest request,
@@ -37,7 +38,7 @@ public sealed class CategoriesController(
         return Ok(category);
     }
 
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Permissions.CategoriesWrite)]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<CategoryResponse>> Update(
         Guid id,
@@ -52,7 +53,7 @@ public sealed class CategoriesController(
         return Ok(category);
     }
 
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Permissions.CategoriesWrite)]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(
         Guid id,

@@ -26,7 +26,8 @@ public sealed class PosFlowDbContext(
         typeof(Product),
         typeof(AppUser),
         typeof(Branch),
-        typeof(Shift)
+        typeof(Shift),
+        typeof(Customer)
     ];
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
@@ -35,6 +36,7 @@ public sealed class PosFlowDbContext(
     public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
     public DbSet<Shift> Shifts => Set<Shift>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderLine> OrderLines => Set<OrderLine>();
     public DbSet<Payment> Payments => Set<Payment>();
@@ -52,6 +54,13 @@ public sealed class PosFlowDbContext(
             entity.Property(x => x.Name)
                 .HasMaxLength(200)
                 .IsRequired();
+
+            entity.Property(x => x.CurrencyCode)
+                .HasMaxLength(3)
+                .IsRequired();
+
+            entity.Property(x => x.TaxRatePercent)
+                .HasPrecision(5, 2);
 
             entity.Property(x => x.RowVersion)
                 .IsRowVersion();
@@ -283,6 +292,23 @@ public sealed class PosFlowDbContext(
                 .IsRequired();
         });
 
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.Phone });
+
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Phone).HasMaxLength(30);
+            entity.Property(x => x.Email).HasMaxLength(256);
+
+            entity.Property(x => x.RowVersion).IsRowVersion();
+        });
+
+        modelBuilder.Entity<Order>()
+            .HasOne<Customer>()
+            .WithMany()
+            .HasForeignKey(x => x.CustomerId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<AuditLog>(entity =>
         {
             entity.ToTable("AuditLogs", "audit");
@@ -332,6 +358,11 @@ public sealed class PosFlowDbContext(
                 x.TenantId == currentTenant.TenantId);
 
         modelBuilder.Entity<AppUser>()
+            .HasQueryFilter(x =>
+                !currentTenant.TenantId.HasValue ||
+                x.TenantId == currentTenant.TenantId);
+
+        modelBuilder.Entity<Customer>()
             .HasQueryFilter(x =>
                 !currentTenant.TenantId.HasValue ||
                 x.TenantId == currentTenant.TenantId);

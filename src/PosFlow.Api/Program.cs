@@ -7,12 +7,16 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authorization;
+using PosFlow.Api.Authorization;
 using PosFlow.Api.Filters;
 using PosFlow.Api.HealthChecks;
 using PosFlow.Api.Middleware;
 using PosFlow.Application.Auth;
 using PosFlow.Application.Branches;
 using PosFlow.Application.Categories;
+using PosFlow.Application.Customers;
+using PosFlow.Infrastructure.Customers;
 using PosFlow.Application.Orders;
 using PosFlow.Application.Products;
 using PosFlow.Application.Reports;
@@ -218,7 +222,21 @@ builder.Services
             };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+
+builder.Services.AddAuthorization(options =>
+{
+    // One ASP.NET Core policy per entry in the Permissions catalog -
+    // see PermissionRequirement/PermissionAuthorizationHandler for how
+    // a policy resolves against the user's role.
+    foreach (var permission in Permissions.All)
+    {
+        options.AddPolicy(
+            permission,
+            policy => policy.Requirements.Add(
+                new PermissionRequirement(permission)));
+    }
+});
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<
@@ -256,6 +274,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IReportService,
     ReportService>();
+
+builder.Services.AddScoped<
+    ICustomerService,
+    CustomerService>();
 
 builder.Services.Configure<SmtpOptions>(
     builder.Configuration.GetSection(SmtpOptions.SectionName));
