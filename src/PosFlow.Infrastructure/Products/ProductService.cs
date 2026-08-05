@@ -209,6 +209,21 @@ public sealed class ProductService(
                 nameof(request.RowVersion));
         }
 
+        // Explicit check first, in addition to the provider-level one
+        // below: the EF Core InMemory provider (used by our unit
+        // tests) does not reliably raise DbUpdateConcurrencyException
+        // from an OriginalValue mismatch the way a real relational
+        // provider does, so relying on that alone left stale updates
+        // silently succeeding under test. This makes the guarantee
+        // explicit and provider-agnostic; the OriginalValue set below
+        // still protects against a real race against SQL Server that
+        // happens between this check and SaveChanges.
+        if (!product.RowVersion.SequenceEqual(originalRowVersion))
+        {
+            throw new InvalidOperationException(
+                "تم تعديل هذا المنتج من شخص آخر في نفس الوقت. من فضلك أعد تحميل الصفحة وحاول مرة أخرى.");
+        }
+
         _dbContext.Entry(product)
             .Property(x => x.RowVersion)
             .OriginalValue = originalRowVersion;
