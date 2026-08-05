@@ -313,4 +313,41 @@ public sealed class PosFlowDbContext(
 
         base.OnModelCreating(modelBuilder);
     }
+
+    public override Task<int> SaveChangesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        BumpRowVersionsOnModifiedEntities();
+
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    public override int SaveChanges()
+    {
+        BumpRowVersionsOnModifiedEntities();
+
+        return base.SaveChanges();
+    }
+
+    /// <summary>
+    /// SQL Server's rowversion columns auto-increment on their own
+    /// (EF just reads the DB-computed value back afterwards, so this
+    /// assignment is harmless there - it gets overwritten). The EF
+    /// Core InMemory provider has no equivalent auto-increment for
+    /// .IsRowVersion() properties though, so without this, optimistic
+    /// concurrency checks against InMemory (used by unit tests) never
+    /// actually see the token change and never detect a real
+    /// conflict. Doing it centrally here, instead of per-service,
+    /// guarantees every entity with a RowVersion gets this for free.
+    /// </summary>
+    private void BumpRowVersionsOnModifiedEntities()
+    {
+        foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.Entity.RowVersion = Guid.NewGuid().ToByteArray();
+            }
+        }
+    }
 }

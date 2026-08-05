@@ -31,6 +31,19 @@ public sealed class GlobalExceptionHandler(
                 httpContext.Request.Method,
                 httpContext.Request.Path);
         }
+        else
+        {
+            // Handled/expected (4xx) exceptions still get a Warning-level
+            // trace with the real exception - useful for spotting e.g. a
+            // spike in 409s that point at a real concurrency bug, which
+            // silent handling would otherwise hide from observability.
+            _logger.LogWarning(
+                exception,
+                "Handled exception ({StatusCode}) on {Method} {Path}",
+                statusCode,
+                httpContext.Request.Method,
+                httpContext.Request.Path);
+        }
 
         httpContext.Response.StatusCode = statusCode;
 

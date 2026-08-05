@@ -31,7 +31,36 @@ using PosFlow.Application.Common;
 using PosFlow.Application.Shifts;
 using PosFlow.Infrastructure.Shifts;
 using Microsoft.OpenApi;
+using Serilog;
+using Serilog.Events;
+
+// Note: deliberately NOT using a static Log.Logger + CreateBootstrapLogger
+// two-stage setup here. That pattern is fine for a real process, but
+// WebApplicationFactory-based integration tests build this Program's
+// host more than once in the same process, and a single static
+// Serilog.Log.Logger gets "frozen" on first use - the second host
+// build then throws. Configuring Serilog purely through
+// Host.UseSerilog(...) below gives each host its own logger instance
+// and works identically in production and in tests.
+static async Task RunApp(string[] args)
+{
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, loggerConfig) => loggerConfig
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithEnvironmentName()
+    .WriteTo.Console()
+    .WriteTo.File(
+        "logs/posflow-.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30));
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -212,20 +241,47 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+// Auto-migrate is opt-in via config (defaults to true in Development
+// through appsettings.Development.json-free convenience, but must be
+// set explicitly for any other environment). In real production
+// deployments, prefer running migrations as an explicit, reviewed
+// pipeline step (see deploy/README.md) and leave this flag off, so a
+// second concurrently-starting instance never races a schema change.
+var autoMigrate = builder.Configuration.GetValue(
+    "App:AutoMigrateOnStartup",
+    app.Environment.IsDevelopment());
+
+if (autoMigrate)
 {
-    var dbContext =
-        scope.ServiceProvider
-            .GetRequiredService<PosFlowDbContext>();
+    using var migrateScope = app.Services.CreateScope();
+    var dbContext = migrateScope.ServiceProvider
+        .GetRequiredService<PosFlowDbContext>();
 
-    var passwordHasher =
-        scope.ServiceProvider
-            .GetRequiredService<
-                IPasswordHasher<AppUser>>();
+    await DatabaseSeeder.MigrateAsync(dbContext);
+}
 
-    await DatabaseSeeder.SeedAsync(
-        dbContext,
-        passwordHasher);
+if (app.Environment.IsDevelopment())
+{
+    using var seedScope = app.Services.CreateScope();
+    var dbContext = seedScope.ServiceProvider
+        .GetRequiredService<PosFlowDbContext>();
+    var passwordHasher = seedScope.ServiceProvider
+        .GetRequiredService<IPasswordHasher<AppUser>>();
+
+    await DatabaseSeeder.SeedDemoDataAsync(dbContext, passwordHasher);
+}
+else if (builder.Configuration.GetValue("App:BootstrapAdminIfEmpty", false))
+{
+    using var bootstrapScope = app.Services.CreateScope();
+    var dbContext = bootstrapScope.ServiceProvider
+        .GetRequiredService<PosFlowDbContext>();
+    var passwordHasher = bootstrapScope.ServiceProvider
+        .GetRequiredService<IPasswordHasher<AppUser>>();
+    var logger = bootstrapScope.ServiceProvider
+        .GetRequiredService<ILogger<Program>>();
+
+    await DatabaseSeeder.BootstrapProductionAdminIfEmptyAsync(
+        dbContext, passwordHasher, logger);
 }
 
 if (app.Environment.IsDevelopment())
@@ -233,6 +289,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Request logging goes first so it observes the FINAL response status,
+// including ones rewritten by the exception handler below (otherwise
+// it logs the pre-handler status, which is misleading for errors).
+app.UseSerilogRequestLogging();
 
 app.UseExceptionHandler();
 
@@ -258,5 +319,9 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 
 app.Run();
+
+}
+
+await RunApp(args);
 
 public partial class Program;

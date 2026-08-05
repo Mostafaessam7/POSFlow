@@ -42,12 +42,15 @@ public sealed class ReportService(
             .Where(x => completedOrderIds.Contains(x.Id))
             .SumAsync(x => (decimal?)x.TotalAmount, cancellationToken) ?? 0;
 
-        var paymentsByMethod = await _dbContext.Payments
+        var todaysPayments = await _dbContext.Payments
             .AsNoTracking()
             .Where(p => completedOrderIds.Contains(p.OrderId))
+            .ToListAsync(cancellationToken);
+
+        var paymentsByMethod = todaysPayments
             .GroupBy(p => p.Method)
             .Select(g => new { Method = g.Key, Total = g.Sum(p => p.Amount) })
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var cashSales = paymentsByMethod
             .FirstOrDefault(x => x.Method == PaymentMethod.Cash)?.Total ?? 0;
@@ -55,9 +58,18 @@ public sealed class ReportService(
         var cardSales = paymentsByMethod
             .FirstOrDefault(x => x.Method == PaymentMethod.Card)?.Total ?? 0;
 
-        var topProducts = await _dbContext.OrderLines
+        // Grouped client-side on purpose: a GroupBy + nested aggregate
+        // Select (g.Sum(...) inside the projection) doesn't translate
+        // reliably across providers once a global query filter is
+        // present on the source set (confirmed failing against EF
+        // Core InMemory). A day's worth of order lines for one branch
+        // is small, so materializing first is cheap and safe.
+        var todaysLines = await _dbContext.OrderLines
             .AsNoTracking()
             .Where(l => completedOrderIds.Contains(l.OrderId))
+            .ToListAsync(cancellationToken);
+
+        var topProducts = todaysLines
             .GroupBy(l => l.ProductName)
             .Select(g => new TopProductResponse(
                 g.Key,
@@ -65,7 +77,7 @@ public sealed class ReportService(
                 g.Sum(x => x.LineTotal)))
             .OrderByDescending(x => x.Revenue)
             .Take(5)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         return new DailySummaryResponse(
             Date: today,

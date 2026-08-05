@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,7 +24,27 @@ public sealed class PosFlowApiFactory : WebApplicationFactory<Program>
     {
         builder.ConfigureServices(services =>
         {
+            // Removing just DbContextOptions<T> isn't enough in modern
+            // EF Core - AddDbContext/UseSqlServer also register
+            // provider-specific internal services (e.g.
+            // IDbContextOptionsConfiguration<T>) that conflict with a
+            // second UseInMemoryDatabase() registration ("Services for
+            // database providers X, Y have been registered"). Strip
+            // every descriptor tied to PosFlowDbContext before
+            // re-registering it against InMemory.
             services.RemoveAll<DbContextOptions<PosFlowDbContext>>();
+            services.RemoveAll<PosFlowDbContext>();
+
+            var efDescriptors = services
+                .Where(d =>
+                    d.ServiceType.FullName?.Contains(
+                        nameof(PosFlowDbContext)) == true)
+                .ToList();
+
+            foreach (var descriptor in efDescriptors)
+            {
+                services.Remove(descriptor);
+            }
 
             services.AddDbContext<PosFlowDbContext>(options =>
             {
