@@ -15,14 +15,26 @@ namespace PosFlow.Infrastructure.Persistence;
 /// </summary>
 public sealed class PosFlowDbContext(
     DbContextOptions<PosFlowDbContext> options,
-    ICurrentTenantProvider currentTenant)
+    ICurrentTenantProvider currentTenant,
+    ICurrentUser? currentUser = null)
     : DbContext(options)
 {
+    /// <summary>Entity types that get an AuditLog row on Create/Update/Delete. See BumpRowVersionsAndAuditChanges.</summary>
+    private static readonly HashSet<Type> AuditedEntityTypes =
+    [
+        typeof(Order),
+        typeof(Product),
+        typeof(AppUser),
+        typeof(Branch),
+        typeof(Shift)
+    ];
+
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
     public DbSet<Shift> Shifts => Set<Shift>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderLine> OrderLines => Set<OrderLine>();
     public DbSet<Payment> Payments => Set<Payment>();
@@ -271,6 +283,19 @@ public sealed class PosFlowDbContext(
                 .IsRequired();
         });
 
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.ToTable("AuditLogs", "audit");
+
+            entity.HasIndex(x => new { x.TenantId, x.TimestampUtc });
+            entity.HasIndex(x => new { x.EntityName, x.EntityId });
+
+            entity.Property(x => x.EntityName).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.EntityId).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.UserDisplayName).HasMaxLength(200);
+            entity.Property(x => x.ChangesJson).HasColumnType("nvarchar(max)");
+        });
+
         modelBuilder.Entity<Branch>()
             .HasQueryFilter(x =>
                 !currentTenant.TenantId.HasValue ||
@@ -318,6 +343,7 @@ public sealed class PosFlowDbContext(
         CancellationToken cancellationToken = default)
     {
         BumpRowVersionsOnModifiedEntities();
+        CaptureAuditEntries();
 
         return base.SaveChangesAsync(cancellationToken);
     }
@@ -325,6 +351,7 @@ public sealed class PosFlowDbContext(
     public override int SaveChanges()
     {
         BumpRowVersionsOnModifiedEntities();
+        CaptureAuditEntries();
 
         return base.SaveChanges();
     }
@@ -348,6 +375,105 @@ public sealed class PosFlowDbContext(
             {
                 entry.Entity.RowVersion = Guid.NewGuid().ToByteArray();
             }
+        }
+    }
+
+    /// <summary>
+    /// Writes one AuditLog row per Create/Update/Delete on an audited
+    /// entity type, in the SAME SaveChanges call/transaction as the
+    /// change itself - so an audit entry and its underlying change can
+    /// never get out of sync (no separate "log it afterwards" step
+    /// that could fail or be skipped). Must run before base.SaveChanges,
+    /// while OriginalValues/CurrentValues are still available.
+    /// </summary>
+    private void CaptureAuditEntries()
+    {
+        var relevantEntries = ChangeTracker.Entries()
+            .Where(e =>
+                AuditedEntityTypes.Contains(e.Entity.GetType()) &&
+                e.State is EntityState.Added or EntityState.Modified
+                    or EntityState.Deleted)
+            .ToList();
+
+        if (relevantEntries.Count == 0)
+        {
+            return;
+        }
+
+        Guid? actorUserId = null;
+        Guid? actorTenantId = null;
+        string? actorName = null;
+
+        // Best-effort: ICurrentUser throws when there's no
+        // authenticated HTTP request (seeding, background jobs). An
+        // audit entry with a null actor still records WHAT changed.
+        try
+        {
+            if (currentUser is not null)
+            {
+                actorUserId = currentUser.UserId;
+                actorTenantId = currentUser.TenantId;
+                actorName = currentUser.Role;
+            }
+        }
+        catch (InvalidOperationException)
+        {
+        }
+
+        foreach (var entry in relevantEntries)
+        {
+            var entityId = entry.Property("Id").CurrentValue?.ToString()
+                ?? "unknown";
+
+            var action = entry.State switch
+            {
+                EntityState.Added => AuditAction.Created,
+                EntityState.Deleted => AuditAction.Deleted,
+                _ => AuditAction.Updated
+            };
+
+            var changes = new Dictionary<string, object?>();
+
+            foreach (var property in entry.Properties)
+            {
+                if (property.Metadata.Name is "RowVersion")
+                {
+                    continue;
+                }
+
+                switch (action)
+                {
+                    case AuditAction.Updated when property.IsModified:
+                        changes[property.Metadata.Name] = new
+                        {
+                            old = property.OriginalValue,
+                            @new = property.CurrentValue
+                        };
+                        break;
+
+                    case AuditAction.Created:
+                    case AuditAction.Deleted:
+                        changes[property.Metadata.Name] = property.CurrentValue;
+                        break;
+                }
+            }
+
+            if (action == AuditAction.Updated && changes.Count == 0)
+            {
+                continue;
+            }
+
+            AuditLogs.Add(new AuditLog
+            {
+                TenantId = actorTenantId,
+                UserId = actorUserId,
+                UserDisplayName = actorName,
+                EntityName = entry.Entity.GetType().Name,
+                EntityId = entityId,
+                Action = action,
+                ChangesJson = System.Text.Json.JsonSerializer.Serialize(changes),
+                TimestampUtc = DateTime.UtcNow
+            });
         }
     }
 }
