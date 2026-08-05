@@ -35,7 +35,7 @@
   }
 
   @if (isLoading) {
-    <div class="message">جاري تحميل السجل...</div>
+    <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>تحميل السجل...</div>
   }
 
   @if (!isLoading && shifts.length === 0) {
@@ -84,7 +84,7 @@
           @if (expandedShiftId === shift.id) {
             <div class="shift-orders">
               @if (isLoadingOrders && !ordersByShift[shift.id]) {
-                <div class="message">جاري تحميل الفواتير...</div>
+                <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>تحميل الفواتير...</div>
               }
 
               @if (ordersByShift[shift.id]?.length === 0) {

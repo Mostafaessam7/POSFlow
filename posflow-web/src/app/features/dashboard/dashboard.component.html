@@ -15,7 +15,7 @@
   }
 
   @if (isLoading) {
-    <div class="message">جاري تحميل الملخص...</div>
+    <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>تحميل الملخص...</div>
   }
 
   @if (!isLoading && summary) {

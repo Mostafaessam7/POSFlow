@@ -210,6 +210,17 @@ table tbody tr:hover {
   transition: transform var(--duration-fast) var(--ease-out);
 }
 
+/* A ".message" showing a "جاري..." loading line, paired with a
+   .spinner - centers everything with a consistent gap regardless of
+   whether the markup has a literal space between the icon and text. */
+.loading-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--color-muted);
+}
+
 /* ---------------------------------------------------------------- */
 /* Page entrance                                                     */
 /* ---------------------------------------------------------------- */
