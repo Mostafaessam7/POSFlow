@@ -50,8 +50,9 @@
     </header>
 
     @if (isLoading) {
-      <div class="message">
-        جاري تحميل بيانات الوردية...
+      <div class="message loading-message">
+        <span class="spinner" aria-hidden="true"></span>
+        تحميل بيانات الوردية...
       </div>
     }
 

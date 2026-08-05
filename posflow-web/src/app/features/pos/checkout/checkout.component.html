@@ -60,7 +60,7 @@
         />
 
         @if (isLoadingProducts) {
-          <div class="message">جاري تحميل المنتجات...</div>
+          <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>تحميل المنتجات...</div>
         }
 
         @if (!isLoadingProducts) {

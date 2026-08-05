@@ -54,7 +54,7 @@
 
         <div class="form-actions">
           <button class="primary-button" type="submit" [disabled]="isSaving">
-            @if (isSaving) { جاري الحفظ... } @else { حفظ }
+            @if (isSaving) { <span class="spinner" aria-hidden="true"></span> جاري الحفظ... } @else { حفظ }
           </button>
 
           <button class="ghost-button" type="button" (click)="cancelForm()">
@@ -66,7 +66,7 @@
   }
 
   @if (isLoading) {
-    <div class="message">جاري تحميل الفروع...</div>
+    <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>تحميل الفروع...</div>
   }
 
   @if (!isLoading) {
