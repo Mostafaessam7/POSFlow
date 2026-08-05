@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { UrlTree, provideRouter } from '@angular/router';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, firstValueFrom, of, throwError } from 'rxjs';
 
 import { shiftGuard } from './shift.guard';
 import { ShiftService } from '../../features/shifts/shift.service';
@@ -16,7 +16,7 @@ describe('shiftGuard', () => {
     });
   }
 
-  it('allows navigation when there is an open shift', done => {
+  it('allows navigation when there is an open shift', async () => {
     setup(() =>
       of({
         hasOpenShift: true,
@@ -41,37 +41,31 @@ describe('shiftGuard', () => {
       shiftGuard({} as any, {} as any)
     ) as Observable<boolean | UrlTree>;
 
-    result$.subscribe(value => {
-      expect(value).toBe(true);
-      done();
-    });
+    const value = await firstValueFrom(result$);
+    expect(value).toBe(true);
   });
 
-  it('redirects to /open-shift when there is no open shift', done => {
+  it('redirects to /open-shift when there is no open shift', async () => {
     setup(() => of({ hasOpenShift: false, shift: null }));
 
     const result$ = TestBed.runInInjectionContext(() =>
       shiftGuard({} as any, {} as any)
     ) as Observable<boolean | UrlTree>;
 
-    result$.subscribe(value => {
-      expect(value instanceof UrlTree).toBe(true);
-      expect((value as UrlTree).toString()).toBe('/open-shift');
-      done();
-    });
+    const value = await firstValueFrom(result$);
+    expect(value instanceof UrlTree).toBe(true);
+    expect((value as UrlTree).toString()).toBe('/open-shift');
   });
 
-  it('redirects to /open-shift when the shift check request fails', done => {
+  it('redirects to /open-shift when the shift check request fails', async () => {
     setup(() => throwError(() => new Error('network error')));
 
     const result$ = TestBed.runInInjectionContext(() =>
       shiftGuard({} as any, {} as any)
     ) as Observable<boolean | UrlTree>;
 
-    result$.subscribe(value => {
-      expect(value instanceof UrlTree).toBe(true);
-      expect((value as UrlTree).toString()).toBe('/open-shift');
-      done();
-    });
+    const value = await firstValueFrom(result$);
+    expect(value instanceof UrlTree).toBe(true);
+    expect((value as UrlTree).toString()).toBe('/open-shift');
   });
 });

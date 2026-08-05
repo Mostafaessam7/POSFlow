@@ -1,0 +1,55 @@
+# Local/dev orchestration - NOT a production deployment manifest on its
+# own (see deploy/README.md for that). Brings up SQL Server + the API +
+# the Angular app together with one command:
+#
+#   cp .env.example .env   # then fill in real values
+#   docker compose up --build
+#
+# The API applies migrations itself once, on first boot, via
+# App__AutoMigrateOnStartup=true below - fine for this local/dev
+# compose file; production should run migrations as an explicit
+# pipeline step instead (see deploy/README.md).
+
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Local_Dev_Pw_123!}
+    ports:
+      - "1433:1433"
+    volumes:
+      - posflow-sql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: src/PosFlow.Api/Dockerfile
+    depends_on:
+      sql:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Server=sql;Database=PosFlowDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Local_Dev_Pw_123!};TrustServerCertificate=True"
+      Jwt__Key: ${JWT_KEY:-Local-Docker-Dev-Key-Change-Me-2026-Min-32-Chars}
+      Cors__AllowedOrigins__0: "http://localhost:4200"
+      App__FrontendBaseUrl: "http://localhost:4200"
+      App__AutoMigrateOnStartup: "true"
+    ports:
+      - "5000:8080"
+
+  web:
+    build:
+      context: ./posflow-web
+    depends_on:
+      - api
+    ports:
+      - "4200:80"
+
+volumes:
+  posflow-sql-data:
