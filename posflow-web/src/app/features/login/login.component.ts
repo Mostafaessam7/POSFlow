@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   inject
 } from '@angular/core';
@@ -45,6 +46,9 @@ export class LoginComponent {
   private readonly router =
     inject(Router);
 
+  private readonly cdr =
+    inject(ChangeDetectorRef);
+
   isSubmitting = false;
   errorMessage = '';
 
@@ -81,6 +85,17 @@ export class LoginComponent {
       .pipe(
         finalize(() => {
           this.isSubmitting = false;
+
+          // See OpenShiftComponent.safeDetectChanges() for why this
+          // call is here - same repro, same fix (Angular isn't
+          // reliably re-rendering this view on its own after the
+          // HTTP call resolves in this app's current build).
+          try {
+            this.cdr.detectChanges();
+          } catch {
+            // View already destroyed (navigated away) - nothing to
+            // render.
+          }
         })
       )
       .subscribe({

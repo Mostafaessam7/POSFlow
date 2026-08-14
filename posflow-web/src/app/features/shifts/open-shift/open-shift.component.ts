@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   OnInit,
   inject
@@ -45,6 +46,11 @@ export class OpenShiftComponent
   private readonly authService =
     inject(AuthService);
 
+  // See loadCurrentShift()/openShift()/closeShift() below for why this
+  // is here.
+  private readonly cdr =
+    inject(ChangeDetectorRef);
+
   readonly isAdmin =
     this.authService.hasAnyRole(Roles.Admin);
 
@@ -85,6 +91,26 @@ export class OpenShiftComponent
     this.loadCurrentShift();
   }
 
+  /**
+   * Angular isn't reliably re-rendering this view on its own after an
+   * HTTP call resolves, in this app's current build (confirmed live:
+   * the component's fields update correctly, but the DOM stays on
+   * stale content - even a stray click or an explicit
+   * ApplicationRef.tick() doesn't help - until something forces a
+   * check directly on this view). detectChanges() bypasses whatever
+   * is skipping the automatic pass. Wrapped defensively: a response
+   * that resolves after the user has already navigated away (e.g.
+   * openShift()'s success path redirects to /pos before this runs)
+   * would otherwise throw on an already-destroyed view.
+   */
+  private safeDetectChanges(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      // View already destroyed (navigated away) - nothing to render.
+    }
+  }
+
 loadCurrentShift(): void {
   this.isLoading = true;
   this.errorMessage = '';
@@ -94,6 +120,7 @@ loadCurrentShift(): void {
     .pipe(
       finalize(() => {
         this.isLoading = false;
+        this.safeDetectChanges();
       })
     )
     .subscribe({
@@ -129,6 +156,7 @@ loadCurrentShift(): void {
       .pipe(
         finalize(() => {
           this.isSubmitting = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
@@ -169,6 +197,7 @@ loadCurrentShift(): void {
       .pipe(
         finalize(() => {
           this.isSubmitting = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
