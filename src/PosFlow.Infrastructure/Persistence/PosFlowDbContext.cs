@@ -40,6 +40,8 @@ public sealed class PosFlowDbContext(
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderLine> OrderLines => Set<OrderLine>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+    public DbSet<ExchangeRate> ExchangeRates => Set<ExchangeRate>();
 
     public DbSet<AppUser> Users => Set<AppUser>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -322,6 +324,42 @@ public sealed class PosFlowDbContext(
             .HasForeignKey(x => x.CustomerId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        modelBuilder.Entity<StockMovement>(entity =>
+        {
+            // Covers "history for product X, newest first" (the only
+            // read pattern the API exposes).
+            entity.HasIndex(x => new { x.TenantId, x.ProductId, x.CreatedAtUtc });
+
+            entity.Property(x => x.QuantityChange).HasPrecision(19, 4);
+            entity.Property(x => x.ResultingStockQuantity).HasPrecision(19, 4);
+            entity.Property(x => x.Note).HasMaxLength(500);
+
+            entity.Property(x => x.Reason)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            entity.HasOne<Product>()
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ExchangeRate>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.CurrencyCode })
+                .IsUnique();
+
+            entity.Property(x => x.CurrencyCode)
+                .HasMaxLength(3)
+                .IsRequired();
+
+            entity.Property(x => x.RatePerBaseUnit)
+                .HasPrecision(19, 6);
+
+            entity.Property(x => x.RowVersion)
+                .IsRowVersion();
+        });
+
         modelBuilder.Entity<AuditLog>(entity =>
         {
             entity.ToTable("AuditLogs", "audit");
@@ -332,7 +370,13 @@ public sealed class PosFlowDbContext(
             entity.Property(x => x.EntityName).HasMaxLength(100).IsRequired();
             entity.Property(x => x.EntityId).HasMaxLength(100).IsRequired();
             entity.Property(x => x.UserDisplayName).HasMaxLength(200);
-            entity.Property(x => x.ChangesJson).HasColumnType("nvarchar(max)");
+
+            // No HasColumnType("nvarchar(max)") here on purpose: an
+            // unbounded string property already maps to nvarchar(max)
+            // on SQL Server by default, and a hardcoded SQL Server
+            // type string would break EnsureCreated/migrations against
+            // any other relational provider (e.g. SQLite in tests).
+            entity.Property(x => x.ChangesJson);
         });
 
         modelBuilder.Entity<Branch>()
@@ -376,6 +420,16 @@ public sealed class PosFlowDbContext(
                 x.TenantId == currentTenant.TenantId);
 
         modelBuilder.Entity<Customer>()
+            .HasQueryFilter(x =>
+                !currentTenant.TenantId.HasValue ||
+                x.TenantId == currentTenant.TenantId);
+
+        modelBuilder.Entity<StockMovement>()
+            .HasQueryFilter(x =>
+                !currentTenant.TenantId.HasValue ||
+                x.TenantId == currentTenant.TenantId);
+
+        modelBuilder.Entity<ExchangeRate>()
             .HasQueryFilter(x =>
                 !currentTenant.TenantId.HasValue ||
                 x.TenantId == currentTenant.TenantId);

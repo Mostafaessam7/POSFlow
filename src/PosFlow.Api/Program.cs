@@ -17,6 +17,8 @@ using PosFlow.Application.Branches;
 using PosFlow.Application.Categories;
 using PosFlow.Application.Customers;
 using PosFlow.Infrastructure.Customers;
+using PosFlow.Application.ExchangeRates;
+using PosFlow.Infrastructure.ExchangeRates;
 using PosFlow.Application.Orders;
 using PosFlow.Application.Products;
 using PosFlow.Application.Reports;
@@ -36,6 +38,7 @@ using PosFlow.Application.Common;
 using PosFlow.Application.Shifts;
 using PosFlow.Infrastructure.Shifts;
 using Microsoft.OpenApi;
+using Prometheus;
 using Serilog;
 using Serilog.Events;
 
@@ -278,6 +281,10 @@ builder.Services.AddScoped<
     OrderService>();
 
 builder.Services.AddScoped<
+    IReceiptPdfService,
+    ReceiptPdfService>();
+
+builder.Services.AddScoped<
     IUserService,
     UserService>();
 
@@ -296,6 +303,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     ICustomerService,
     CustomerService>();
+
+builder.Services.AddScoped<
+    IExchangeRateService,
+    ExchangeRateService>();
 
 builder.Services.Configure<SmtpOptions>(
     builder.Configuration.GetSection(SmtpOptions.SectionName));
@@ -409,6 +420,12 @@ app.Use(async (context, next) =>
 
 app.UseHttpsRedirection();
 
+// HTTP request metrics (count/duration/in-flight, labelled by route,
+// method, status code) for a self-hosted Prometheus/Grafana - see
+// /metrics below. No external monitoring account or SaaS dependency;
+// whoever runs this instance points their own Prometheus at it.
+app.UseHttpMetrics();
+
 app.UseCors(CorsPolicyName);
 
 app.UseRateLimiter();
@@ -436,6 +453,13 @@ app.MapHealthChecks("/health/ready", new()
 {
     Predicate = check => check.Tags.Contains("ready")
 });
+
+// Prometheus text-format scrape endpoint. Deliberately unauthenticated
+// (Prometheus itself has no bearer-token login flow) - like /health,
+// protect it at the network layer in production (internal-only
+// ingress rule, or a reverse-proxy rule restricting /metrics to the
+// monitoring subnet) rather than app-level auth.
+app.MapMetrics("/metrics");
 
 app.Run();
 

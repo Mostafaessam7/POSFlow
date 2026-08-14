@@ -43,6 +43,15 @@
         </div>
       }
 
+      <button
+        class="secondary-button"
+        type="button"
+        [disabled]="isDownloadingReceipt"
+        (click)="downloadReceiptPdf()"
+      >
+        {{ isDownloadingReceipt ? 'جارِ التحميل...' : 'تحميل الفاتورة PDF' }}
+      </button>
+
       <button class="primary-button" type="button" (click)="startNewSale()">
         فاتورة جديدة
       </button>
@@ -57,6 +66,7 @@
           aria-label="بحث عن منتج"
           [(ngModel)]="searchTerm"
           (ngModelChange)="onSearchChange()"
+          (keydown.enter)="onSearchEnter($event)"
         />
 
         @if (isLoadingProducts) {

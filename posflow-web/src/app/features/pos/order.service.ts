@@ -54,6 +54,13 @@ export class OrderService {
     );
   }
 
+  getReceiptPdf(id: string): Observable<Blob> {
+    return this.http.get(
+      `/api/orders/${id}/receipt-pdf`,
+      { responseType: 'blob' }
+    );
+  }
+
   voidOrder(
     id: string,
     request: VoidOrderRequest
