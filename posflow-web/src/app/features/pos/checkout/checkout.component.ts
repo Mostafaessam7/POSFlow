@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   HostListener,
   OnDestroy,
@@ -61,6 +62,9 @@ export class CheckoutComponent
   private readonly router =
     inject(Router);
 
+  private readonly cdr =
+    inject(ChangeDetectorRef);
+
   private readonly searchTerm$ = new Subject<void>();
 
   readonly PaymentMethod = PaymentMethod;
@@ -88,11 +92,29 @@ export class CheckoutComponent
     // the whole catalog on every keystroke.
     this.searchTerm$
       .pipe(debounceTime(150))
-      .subscribe(() => this.runSearch());
+      .subscribe(() => {
+        this.runSearch();
+        this.safeDetectChanges();
+      });
   }
 
   ngOnDestroy(): void {
     this.searchTerm$.complete();
+  }
+
+  /**
+   * Angular isn't reliably re-rendering this view on its own after an
+   * HTTP call (or a debounced RxJS emission) resolves, in this app's
+   * current build - see OpenShiftComponent.safeDetectChanges() for the
+   * full repro notes. Wrapped defensively against an already-destroyed
+   * view (e.g. the user navigated away while a request was in flight).
+   */
+  private safeDetectChanges(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      // View already destroyed - nothing to render.
+    }
   }
 
   @HostListener('document:keydown.enter', ['$event'])
@@ -119,6 +141,7 @@ export class CheckoutComponent
       .pipe(
         finalize(() => {
           this.isLoadingProducts = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
@@ -157,6 +180,7 @@ export class CheckoutComponent
         this.addToCart(product);
         this.searchTerm = '';
         this.runSearch();
+        this.safeDetectChanges();
       },
 
       error: () => {
@@ -164,6 +188,7 @@ export class CheckoutComponent
         // name) - fall back to the existing client-side filtered list
         // and let them pick manually instead of showing an error.
         this.runSearch();
+        this.safeDetectChanges();
       }
     });
   }
@@ -194,6 +219,7 @@ export class CheckoutComponent
       .pipe(
         finalize(() => {
           this.isDownloadingReceipt = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
@@ -379,6 +405,7 @@ export class CheckoutComponent
       .pipe(
         finalize(() => {
           this.isCheckingOut = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
