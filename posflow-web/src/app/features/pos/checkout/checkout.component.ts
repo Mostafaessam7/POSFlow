@@ -137,6 +137,37 @@ export class CheckoutComponent
     this.searchTerm$.next();
   }
 
+  /// Barcode-scanner flow: a scanner types the barcode digits then
+  /// sends Enter. Look the product up on the server by exact barcode
+  /// (works regardless of catalog size) instead of relying on the
+  /// client-side filtered list, add it straight to the cart, and clear
+  /// the search box for the next scan.
+  onSearchEnter(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const barcode = this.searchTerm.trim();
+
+    if (!barcode) {
+      return;
+    }
+
+    this.productService.getByBarcode(barcode).subscribe({
+      next: product => {
+        this.addToCart(product);
+        this.searchTerm = '';
+        this.runSearch();
+      },
+
+      error: () => {
+        // Not an exact barcode match (e.g. the cashier typed a partial
+        // name) - fall back to the existing client-side filtered list
+        // and let them pick manually instead of showing an error.
+        this.runSearch();
+      }
+    });
+  }
+
   private runSearch(): void {
     const term = this.searchTerm.trim().toLowerCase();
 
@@ -147,6 +178,38 @@ export class CheckoutComponent
           (product.nameEn ?? '').toLowerCase().includes(term) ||
           (product.barcode ?? '').includes(term)
         );
+  }
+
+  isDownloadingReceipt = false;
+
+  downloadReceiptPdf(): void {
+    if (!this.lastReceipt) {
+      return;
+    }
+
+    this.isDownloadingReceipt = true;
+
+    this.orderService
+      .getReceiptPdf(this.lastReceipt.id)
+      .pipe(
+        finalize(() => {
+          this.isDownloadingReceipt = false;
+        })
+      )
+      .subscribe({
+        next: blob => {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `فاتورة-${this.lastReceipt?.orderNumber}.pdf`;
+          link.click();
+          window.URL.revokeObjectURL(url);
+        },
+
+        error: () => {
+          this.errorMessage = 'تعذر تحميل ملف PDF للفاتورة';
+        }
+      });
   }
 
   addToCart(product: ProductResponse): void {

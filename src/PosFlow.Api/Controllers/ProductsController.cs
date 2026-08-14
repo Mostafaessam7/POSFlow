@@ -53,6 +53,26 @@ public sealed class ProductsController(
         return Ok(product);
     }
 
+    [HttpGet("by-barcode/{barcode}")]
+    public async Task<ActionResult<ProductResponse>> GetByBarcode(
+        string barcode,
+        CancellationToken cancellationToken)
+    {
+        var product = await _productService.GetByBarcodeAsync(
+            barcode,
+            cancellationToken);
+
+        if (product is null)
+        {
+            return NotFound(new
+            {
+                message = "لا يوجد منتج بهذا الباركود."
+            });
+        }
+
+        return Ok(product);
+    }
+
     [Authorize(Policy = Permissions.ProductsWrite)]
     [HttpPost]
     public async Task<ActionResult<ProductResponse>> Create(
@@ -82,6 +102,22 @@ public sealed class ProductsController(
             cancellationToken);
 
         return Ok(product);
+    }
+
+    [HttpGet("{id:guid}/stock-movements")]
+    public async Task<ActionResult<PagedResult<StockMovementResponse>>> GetStockMovements(
+        Guid id,
+        [FromQuery] int page,
+        [FromQuery] int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var movements = await _productService.GetStockMovementsAsync(
+            id,
+            page == 0 ? 1 : page,
+            pageSize == 0 ? Paging.DefaultPageSize : pageSize,
+            cancellationToken);
+
+        return Ok(movements);
     }
 
     [Authorize(Policy = Permissions.ProductsWrite)]

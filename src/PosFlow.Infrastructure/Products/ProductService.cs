@@ -104,6 +104,36 @@ public sealed class ProductService(
         return MapResponse(product, categoryName);
     }
 
+    public async Task<ProductResponse?> GetByBarcodeAsync(
+        string barcode,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(barcode))
+        {
+            return null;
+        }
+
+        var product = await _dbContext.Products
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                x =>
+                    x.TenantId == _currentUser.TenantId &&
+                    x.IsActive &&
+                    x.Barcode == barcode,
+                cancellationToken);
+
+        if (product is null)
+        {
+            return null;
+        }
+
+        var categoryName = await GetCategoryNameAsync(
+            product.CategoryId,
+            cancellationToken);
+
+        return MapResponse(product, categoryName);
+    }
+
     public async Task<ProductResponse> CreateAsync(
         CreateProductRequest request,
         CancellationToken cancellationToken = default)
@@ -143,6 +173,20 @@ public sealed class ProductService(
         };
 
         _dbContext.Products.Add(product);
+
+        if (product.StockQuantity != 0)
+        {
+            _dbContext.StockMovements.Add(new StockMovement
+            {
+                TenantId = _currentUser.TenantId,
+                ProductId = product.Id,
+                QuantityChange = product.StockQuantity,
+                ResultingStockQuantity = product.StockQuantity,
+                Reason = StockMovementReason.StockReceived,
+                UserId = _currentUser.UserId,
+                Note = "رصيد افتتاحي عند إنشاء المنتج"
+            });
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -228,6 +272,8 @@ public sealed class ProductService(
             .Property(x => x.RowVersion)
             .OriginalValue = originalRowVersion;
 
+        var previousStockQuantity = product.StockQuantity;
+
         product.NameAr = request.NameAr;
         product.NameEn = request.NameEn;
         product.Barcode = request.Barcode;
@@ -237,6 +283,22 @@ public sealed class ProductService(
         product.TrackStock = request.TrackStock;
         product.StockQuantity = request.StockQuantity;
         product.UpdatedAtUtc = DateTime.UtcNow;
+
+        // Anything that lands here (not through checkout/void) is by
+        // definition a manual edit on the product form - log it so
+        // "الكمية اتغيرت لوحدها" is always answerable.
+        if (request.StockQuantity != previousStockQuantity)
+        {
+            _dbContext.StockMovements.Add(new StockMovement
+            {
+                TenantId = _currentUser.TenantId,
+                ProductId = product.Id,
+                QuantityChange = request.StockQuantity - previousStockQuantity,
+                ResultingStockQuantity = request.StockQuantity,
+                Reason = StockMovementReason.ManualAdjustment,
+                UserId = _currentUser.UserId
+            });
+        }
 
         try
         {
@@ -276,6 +338,60 @@ public sealed class ProductService(
         product.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<PagedResult<StockMovementResponse>> GetStockMovementsAsync(
+        Guid productId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var (clampedPage, clampedPageSize) =
+            Paging.Clamp(page, pageSize);
+
+        var productExists = await _dbContext.Products
+            .AsNoTracking()
+            .AnyAsync(
+                x =>
+                    x.Id == productId &&
+                    x.TenantId == _currentUser.TenantId,
+                cancellationToken);
+
+        if (!productExists)
+        {
+            throw new KeyNotFoundException("المنتج غير موجود.");
+        }
+
+        var query = _dbContext.StockMovements
+            .AsNoTracking()
+            .Where(x => x.ProductId == productId);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var movements = await query
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .Skip((clampedPage - 1) * clampedPageSize)
+            .Take(clampedPageSize)
+            .ToListAsync(cancellationToken);
+
+        var items = movements
+            .Select(x => new StockMovementResponse(
+                Id: x.Id,
+                ProductId: x.ProductId,
+                QuantityChange: x.QuantityChange,
+                ResultingStockQuantity: x.ResultingStockQuantity,
+                Reason: x.Reason.ToString(),
+                OrderId: x.OrderId,
+                UserId: x.UserId,
+                Note: x.Note,
+                CreatedAtUtc: x.CreatedAtUtc))
+            .ToList();
+
+        return new PagedResult<StockMovementResponse>(
+            items,
+            clampedPage,
+            clampedPageSize,
+            totalCount);
     }
 
     private async Task EnsureCategoryBelongsToTenantAsync(

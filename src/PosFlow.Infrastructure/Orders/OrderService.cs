@@ -194,6 +194,8 @@ public sealed class OrderService(
         // has to retry, the same decrement is harmless to redo since
         // it's applied to the same tracked Product instances only once
         // (outside the loop), then saved together with the order.
+        var stockMovements = new List<StockMovement>();
+
         foreach (var (productId, requestedQuantity) in quantityByProduct)
         {
             var product = products[productId];
@@ -202,8 +204,31 @@ public sealed class OrderService(
             {
                 product.StockQuantity -= requestedQuantity;
                 product.UpdatedAtUtc = DateTime.UtcNow;
+
+                stockMovements.Add(new StockMovement
+                {
+                    TenantId = _currentUser.TenantId,
+                    ProductId = product.Id,
+                    QuantityChange = -requestedQuantity,
+                    ResultingStockQuantity = product.StockQuantity,
+                    Reason = StockMovementReason.Sale,
+                    UserId = _currentUser.UserId
+                    // OrderId is set once `order.Id` is final, below -
+                    // it's a fixed Guid assigned at construction time,
+                    // so it's already known even before SaveChanges.
+                });
             }
         }
+
+        foreach (var movement in stockMovements)
+        {
+            movement.OrderId = order.Id;
+        }
+
+        // Added once, outside the retry loop: unlike order/orderLines/
+        // payments these don't need order.OrderNumber and never get
+        // detached on retry, so they'd otherwise be double-inserted.
+        _dbContext.StockMovements.AddRange(stockMovements);
 
         for (var attempt = 1; attempt <= MaxOrderNumberAttempts; attempt++)
         {
@@ -390,6 +415,18 @@ public sealed class OrderService(
             {
                 product.StockQuantity += line.Quantity;
                 product.UpdatedAtUtc = DateTime.UtcNow;
+
+                _dbContext.StockMovements.Add(new StockMovement
+                {
+                    TenantId = _currentUser.TenantId,
+                    ProductId = product.Id,
+                    QuantityChange = line.Quantity,
+                    ResultingStockQuantity = product.StockQuantity,
+                    Reason = StockMovementReason.OrderVoided,
+                    OrderId = order.Id,
+                    UserId = _currentUser.UserId,
+                    Note = request.Reason
+                });
             }
         }
 

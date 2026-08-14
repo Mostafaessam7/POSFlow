@@ -9,10 +9,12 @@ namespace PosFlow.Api.Controllers;
 [ApiController]
 [Route("api/orders")]
 public sealed class OrdersController(
-    IOrderService orderService)
+    IOrderService orderService,
+    IReceiptPdfService receiptPdfService)
     : ControllerBase
 {
     private readonly IOrderService _orderService = orderService;
+    private readonly IReceiptPdfService _receiptPdfService = receiptPdfService;
 
     [HttpGet]
     public async Task<ActionResult<PagedResult<OrderResponse>>>
@@ -78,6 +80,18 @@ public sealed class OrdersController(
             nameof(GetById),
             new { id = order.Id },
             order);
+    }
+
+    [HttpGet("{id:guid}/receipt-pdf")]
+    public async Task<IActionResult> GetReceiptPdf(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var pdfBytes = await _receiptPdfService.GenerateReceiptPdfAsync(
+            id,
+            cancellationToken);
+
+        return File(pdfBytes, "application/pdf", $"receipt-{id}.pdf");
     }
 
     [Authorize(Policy = Permissions.OrdersVoid)]

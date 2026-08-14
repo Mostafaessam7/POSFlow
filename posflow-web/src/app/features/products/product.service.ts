@@ -64,6 +64,16 @@ export class ProductService {
     );
   }
 
+  /// Server-side exact barcode lookup - used by scanner input (barcode +
+  /// Enter) instead of filtering the client-side product list, so it
+  /// still works correctly for catalogs larger than the page loaded
+  /// into the POS screen.
+  getByBarcode(barcode: string): Observable<ProductResponse> {
+    return this.http.get<ProductResponse>(
+      `/api/products/by-barcode/${encodeURIComponent(barcode)}`
+    );
+  }
+
   getCategories(): Observable<CategoryResponse[]> {
     return this.http.get<CategoryResponse[]>(
       '/api/categories'
