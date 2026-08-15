@@ -87,6 +87,24 @@ button {
   font-size: 13px;
 }
 
+// Discreet parent-company credit - PosFlow keeps its own identity
+// above; this is just a small footer nod, not a rebrand.
+.powered-by {
+  margin: 6px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--color-muted-light);
+  text-align: center;
+  font-size: 11px;
+  opacity: 0.7;
+
+  img {
+    display: block;
+  }
+}
+
 .validation-error {
   color: var(--color-danger);
   font-size: 13px;
