@@ -58,6 +58,30 @@ public static class DatabaseSeeder
             dbContext.Branches.Add(branch);
         }
 
+        var hasSecondBranch = await dbContext.Branches
+            .AnyAsync(x => x.TenantId == tenant.Id && x.Code == "MALL");
+
+        if (!hasSecondBranch)
+        {
+            dbContext.Branches.Add(new Branch
+            {
+                TenantId = tenant.Id,
+                Name = "فرع المول",
+                Code = "MALL"
+            });
+        }
+
+        var hasExchangeRates = await dbContext.ExchangeRates
+            .AnyAsync(x => x.TenantId == tenant.Id);
+
+        if (!hasExchangeRates)
+        {
+            dbContext.ExchangeRates.AddRange(
+                new ExchangeRate { TenantId = tenant.Id, CurrencyCode = "USD", RatePerBaseUnit = 0.020m },
+                new ExchangeRate { TenantId = tenant.Id, CurrencyCode = "SAR", RatePerBaseUnit = 0.076m },
+                new ExchangeRate { TenantId = tenant.Id, CurrencyCode = "EUR", RatePerBaseUnit = 0.019m });
+        }
+
         var adminExists = await dbContext.Users
             .AnyAsync(x => x.NormalizedUsername == "ADMIN");
 
@@ -82,13 +106,15 @@ public static class DatabaseSeeder
         var hasCategories = await dbContext.ProductCategories.AnyAsync();
         ProductCategory? drinksCategory = null;
         ProductCategory? foodCategory = null;
+        ProductCategory? dessertsCategory = null;
 
         if (!hasCategories)
         {
             drinksCategory = new ProductCategory { TenantId = tenant.Id, NameAr = "مشروبات", NameEn = "Drinks" };
             foodCategory = new ProductCategory { TenantId = tenant.Id, NameAr = "مأكولات", NameEn = "Food" };
+            dessertsCategory = new ProductCategory { TenantId = tenant.Id, NameAr = "حلويات", NameEn = "Desserts" };
 
-            dbContext.ProductCategories.AddRange(drinksCategory, foodCategory);
+            dbContext.ProductCategories.AddRange(drinksCategory, foodCategory, dessertsCategory);
         }
 
         var hasProducts = await dbContext.Products.AnyAsync();
@@ -105,6 +131,14 @@ public static class DatabaseSeeder
                 new Product { TenantId = tenant.Id, CategoryId = drinksCategory?.Id, NameAr = "مياه", NameEn = "Water", Barcode = "1005", Price = 15, TrackStock = true, StockQuantity = 200 },
                 new Product { TenantId = tenant.Id, CategoryId = foodCategory?.Id, NameAr = "كرواسون", NameEn = "Croissant", Barcode = "1006", Price = 35, TrackStock = true, StockQuantity = 50 },
                 new Product { TenantId = tenant.Id, CategoryId = foodCategory?.Id, NameAr = "بيتزا صغيرة", NameEn = "Mini Pizza", Barcode = "1007", Price = 90, TrackStock = true, StockQuantity = 25 },
+                new Product { TenantId = tenant.Id, CategoryId = drinksCategory?.Id, NameAr = "لاتيه", NameEn = "Latte", Barcode = "1008", Price = 55, TrackStock = true, StockQuantity = 80 },
+                new Product { TenantId = tenant.Id, CategoryId = drinksCategory?.Id, NameAr = "عصير مانجو", NameEn = "Mango Juice", Barcode = "1009", Price = 45, TrackStock = true, StockQuantity = 60 },
+                new Product { TenantId = tenant.Id, CategoryId = foodCategory?.Id, NameAr = "برجر", NameEn = "Burger", Barcode = "1010", Price = 110, TrackStock = true, StockQuantity = 30 },
+                new Product { TenantId = tenant.Id, CategoryId = foodCategory?.Id, NameAr = "بطاطس مقلية", NameEn = "French Fries", Barcode = "1011", Price = 35, TrackStock = true, StockQuantity = 70 },
+                new Product { TenantId = tenant.Id, CategoryId = foodCategory?.Id, NameAr = "سلطة سيزر", NameEn = "Caesar Salad", Barcode = "1012", Price = 65, TrackStock = true, StockQuantity = 20 },
+                new Product { TenantId = tenant.Id, CategoryId = dessertsCategory?.Id, NameAr = "تشيز كيك", NameEn = "Cheesecake", Barcode = "1013", Price = 60, TrackStock = true, StockQuantity = 15 },
+                new Product { TenantId = tenant.Id, CategoryId = dessertsCategory?.Id, NameAr = "آيس كريم", NameEn = "Ice Cream", Barcode = "1014", Price = 30, TrackStock = true, StockQuantity = 45 },
+                new Product { TenantId = tenant.Id, CategoryId = dessertsCategory?.Id, NameAr = "براونيز", NameEn = "Brownie", Barcode = "1015", Price = 40, TrackStock = true, StockQuantity = 35 },
             ];
 
             dbContext.Products.AddRange(seededProducts);
@@ -142,6 +176,11 @@ public static class DatabaseSeeder
                 new Customer { TenantId = tenant.Id, Name = "أحمد محمود", Phone = "01001234567", Email = "ahmed@example.com", LoyaltyPoints = 120 },
                 new Customer { TenantId = tenant.Id, Name = "سارة علي", Phone = "01109876543", Email = "sara@example.com", LoyaltyPoints = 45 },
                 new Customer { TenantId = tenant.Id, Name = "محمد عبد الله", Phone = "01223344556" },
+                new Customer { TenantId = tenant.Id, Name = "منى إبراهيم", Phone = "01512345678", Email = "mona@example.com", LoyaltyPoints = 210 },
+                new Customer { TenantId = tenant.Id, Name = "خالد يوسف", Phone = "01098765432", Email = "khaled@example.com", LoyaltyPoints = 30 },
+                new Customer { TenantId = tenant.Id, Name = "ياسمين حسن", Phone = "01234567890", Email = "yasmin@example.com", LoyaltyPoints = 85 },
+                new Customer { TenantId = tenant.Id, Name = "عمر شريف", Phone = "01187654321" },
+                new Customer { TenantId = tenant.Id, Name = "نور الدين فتحي", Phone = "01055566677", Email = "nour@example.com", LoyaltyPoints = 15 },
             ];
 
             dbContext.Customers.AddRange(seededCustomers);
@@ -173,54 +212,135 @@ public static class DatabaseSeeder
             seededCustomers = customers;
 
             var shiftUser = cashier ?? await dbContext.Users.FirstAsync(x => x.NormalizedUsername == "ADMIN");
-            var openedAt = DateTime.UtcNow.AddDays(-1);
-
-            var closedShift = new Shift
-            {
-                TenantId = tenant.Id,
-                BranchId = branch.Id,
-                UserId = shiftUser.Id,
-                OpeningCash = 500,
-                ClosingCash = 950,
-                CashSales = 450,
-                ExpectedCash = 950,
-                CashDifference = 0,
-                OpenedAtUtc = openedAt,
-                ClosedAtUtc = openedAt.AddHours(8),
-                Status = ShiftStatus.Closed
-            };
-
-            dbContext.Shifts.Add(closedShift);
-            await dbContext.SaveChangesAsync();
 
             var coffee = seededProducts[0];
+            var tea = seededProducts[1];
+            var juice = seededProducts[2];
             var sandwich = seededProducts[3];
             var water = seededProducts[4];
+            var croissant = seededProducts[5];
+            var pizza = seededProducts[6];
+            var burger = seededProducts.Count > 9 ? seededProducts[9] : sandwich;
+            var fries = seededProducts.Count > 10 ? seededProducts[10] : water;
+            var cheesecake = seededProducts.Count > 12 ? seededProducts[12] : croissant;
 
-            var order1 = BuildDemoOrder(
-                tenant.Id,
-                branch.Id,
-                closedShift.Id,
-                seededCustomers?.ElementAtOrDefault(0)?.Id,
-                "ORD-0001",
-                openedAt.AddHours(1),
-                (coffee, 2m),
-                (water, 1m));
+            var orders = new List<Order>();
+            var payments = new List<Payment>();
+            var orderSeq = 1;
 
-            var order2 = BuildDemoOrder(
-                tenant.Id,
-                branch.Id,
-                closedShift.Id,
-                seededCustomers?.ElementAtOrDefault(1)?.Id,
-                "ORD-0002",
-                openedAt.AddHours(3),
-                (sandwich, 1m),
-                (coffee, 1m));
+            // Three closed shifts on three separate past days (kept
+            // deliberately out of "today" so reports/tests that filter
+            // on the current day stay predictable) - covers cash,
+            // card, and split-payment checkouts, an order with no
+            // linked customer, and one voided order.
+            for (var dayOffset = 3; dayOffset >= 1; dayOffset--)
+            {
+                var openedAt = DateTime.UtcNow.AddDays(-dayOffset).Date.AddHours(9);
 
-            dbContext.Orders.AddRange(order1, order2);
-            dbContext.Payments.AddRange(
-                new Payment { TenantId = tenant.Id, OrderId = order1.Id, Method = PaymentMethod.Cash, Amount = order1.TotalAmount },
-                new Payment { TenantId = tenant.Id, OrderId = order2.Id, Method = PaymentMethod.Card, Amount = order2.TotalAmount, ReferenceNumber = "REF-1002" });
+                var shift = new Shift
+                {
+                    TenantId = tenant.Id,
+                    BranchId = branch.Id,
+                    UserId = shiftUser.Id,
+                    OpeningCash = 500,
+                    ClosingCash = 500 + (dayOffset * 150),
+                    CashSales = dayOffset * 150,
+                    ExpectedCash = 500 + (dayOffset * 150),
+                    CashDifference = 0,
+                    OpenedAtUtc = openedAt,
+                    ClosedAtUtc = openedAt.AddHours(8),
+                    Status = ShiftStatus.Closed
+                };
+
+                dbContext.Shifts.Add(shift);
+                await dbContext.SaveChangesAsync();
+
+                var order1 = BuildDemoOrder(
+                    tenant.Id,
+                    branch.Id,
+                    shift.Id,
+                    seededCustomers?.ElementAtOrDefault(orderSeq % seededCustomers.Count)?.Id,
+                    $"ORD-{orderSeq:D4}",
+                    openedAt.AddHours(1),
+                    (coffee, 2m),
+                    (water, 1m));
+                payments.Add(new Payment { TenantId = tenant.Id, OrderId = order1.Id, Method = PaymentMethod.Cash, Amount = order1.TotalAmount });
+                orders.Add(order1);
+                orderSeq++;
+
+                var order2 = BuildDemoOrder(
+                    tenant.Id,
+                    branch.Id,
+                    shift.Id,
+                    seededCustomers?.ElementAtOrDefault((orderSeq + 2) % seededCustomers.Count)?.Id,
+                    $"ORD-{orderSeq:D4}",
+                    openedAt.AddHours(3),
+                    (sandwich, 1m),
+                    (tea, 1m));
+                payments.Add(new Payment { TenantId = tenant.Id, OrderId = order2.Id, Method = PaymentMethod.Card, Amount = order2.TotalAmount, ReferenceNumber = $"REF-{1000 + orderSeq}" });
+                orders.Add(order2);
+                orderSeq++;
+
+                // No linked customer - an anonymous walk-in sale, split
+                // across cash + card to exercise the multi-payment path.
+                var order3 = BuildDemoOrder(
+                    tenant.Id,
+                    branch.Id,
+                    shift.Id,
+                    null,
+                    $"ORD-{orderSeq:D4}",
+                    openedAt.AddHours(5),
+                    (pizza, 1m),
+                    (juice, 2m),
+                    (croissant, 1m));
+                var halfTotal = Math.Round(order3.TotalAmount / 2, 2);
+                payments.Add(new Payment { TenantId = tenant.Id, OrderId = order3.Id, Method = PaymentMethod.Cash, Amount = halfTotal });
+                payments.Add(new Payment { TenantId = tenant.Id, OrderId = order3.Id, Method = PaymentMethod.Card, Amount = order3.TotalAmount - halfTotal, ReferenceNumber = $"REF-{2000 + orderSeq}" });
+                orders.Add(order3);
+                orderSeq++;
+
+                if (dayOffset == 2)
+                {
+                    // One voided order, on the middle day only, so the
+                    // dashboard/reports screens have a real example of
+                    // a cancelled sale to show.
+                    var voidedOrder = BuildDemoOrder(
+                        tenant.Id,
+                        branch.Id,
+                        shift.Id,
+                        seededCustomers?.ElementAtOrDefault(orderSeq % seededCustomers.Count)?.Id,
+                        $"ORD-{orderSeq:D4}",
+                        openedAt.AddHours(6),
+                        (burger, 1m),
+                        (fries, 1m));
+
+                    voidedOrder.Status = OrderStatus.Cancelled;
+                    voidedOrder.VoidReason = "طلب العميل إلغاء الأوردر بعد الدفع بالخطأ";
+                    voidedOrder.VoidedAtUtc = openedAt.AddHours(6).AddMinutes(10);
+
+                    payments.Add(new Payment { TenantId = tenant.Id, OrderId = voidedOrder.Id, Method = PaymentMethod.Cash, Amount = voidedOrder.TotalAmount });
+                    orders.Add(voidedOrder);
+                    orderSeq++;
+                }
+
+                if (dayOffset == 1 && cheesecake != croissant)
+                {
+                    var dessertOrder = BuildDemoOrder(
+                        tenant.Id,
+                        branch.Id,
+                        shift.Id,
+                        seededCustomers?.ElementAtOrDefault(orderSeq % seededCustomers.Count)?.Id,
+                        $"ORD-{orderSeq:D4}",
+                        openedAt.AddHours(7),
+                        (cheesecake, 2m));
+                    payments.Add(new Payment { TenantId = tenant.Id, OrderId = dessertOrder.Id, Method = PaymentMethod.Card, Amount = dessertOrder.TotalAmount, ReferenceNumber = $"REF-{3000 + orderSeq}" });
+                    orders.Add(dessertOrder);
+                    orderSeq++;
+                }
+            }
+
+            dbContext.Orders.AddRange(orders);
+            dbContext.Payments.AddRange(payments);
 
             await dbContext.SaveChangesAsync();
         }
