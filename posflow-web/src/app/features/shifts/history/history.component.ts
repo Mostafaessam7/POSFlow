@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   OnInit,
   inject
@@ -44,6 +45,9 @@ export class HistoryComponent
 
   private readonly router =
     inject(Router);
+
+  private readonly cdr =
+    inject(ChangeDetectorRef);
 
   readonly canViewBranch =
     this.authService.hasAnyRole(Roles.Admin, Roles.Manager);
@@ -97,6 +101,7 @@ export class HistoryComponent
       .pipe(
         finalize(() => {
           this.isLoading = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
@@ -131,6 +136,7 @@ export class HistoryComponent
       .pipe(
         finalize(() => {
           this.isLoadingOrders = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
@@ -180,11 +186,26 @@ export class HistoryComponent
           this.errorMessage =
             error?.error?.message ??
             'تعذر إلغاء الفاتورة';
+          this.safeDetectChanges();
         }
       });
   }
 
   goBack(): void {
     this.router.navigateByUrl('/open-shift');
+  }
+
+  /**
+   * Angular isn't reliably re-rendering this view on its own after an
+   * HTTP call resolves, in this app's current build - see
+   * OpenShiftComponent.safeDetectChanges() for the full repro notes.
+   * Wrapped defensively against an already-destroyed view.
+   */
+  private safeDetectChanges(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      // View already destroyed - nothing to render.
+    }
   }
 }

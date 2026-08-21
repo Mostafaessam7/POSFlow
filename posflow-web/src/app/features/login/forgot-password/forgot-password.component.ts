@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   inject
 } from '@angular/core';
@@ -36,6 +37,9 @@ export class ForgotPasswordComponent {
   private readonly router =
     inject(Router);
 
+  private readonly cdr =
+    inject(ChangeDetectorRef);
+
   isSubmitting = false;
   isSubmitted = false;
   errorMessage = '';
@@ -59,6 +63,7 @@ export class ForgotPasswordComponent {
       .pipe(
         finalize(() => {
           this.isSubmitting = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
@@ -76,5 +81,19 @@ export class ForgotPasswordComponent {
 
   goToLogin(): void {
     this.router.navigateByUrl('/login');
+  }
+
+  /**
+   * Angular isn't reliably re-rendering this view on its own after an
+   * HTTP call resolves, in this app's current build - see
+   * OpenShiftComponent.safeDetectChanges() for the full repro notes.
+   * Wrapped defensively against an already-destroyed view.
+   */
+  private safeDetectChanges(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      // View already destroyed - nothing to render.
+    }
   }
 }
