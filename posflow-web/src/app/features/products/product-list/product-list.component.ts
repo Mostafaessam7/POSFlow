@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   OnInit,
   inject
@@ -55,6 +56,9 @@ export class ProductListComponent
   private readonly router =
     inject(Router);
 
+  private readonly cdr =
+    inject(ChangeDetectorRef);
+
   readonly canManage =
     this.authService.hasAnyRole(Roles.Admin, Roles.Manager);
 
@@ -99,6 +103,7 @@ export class ProductListComponent
     this.productService.getCategories().subscribe({
       next: categories => {
         this.categories = categories;
+        this.safeDetectChanges();
       }
     });
   }
@@ -117,6 +122,7 @@ export class ProductListComponent
       .pipe(
         finalize(() => {
           this.isLoading = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
@@ -169,6 +175,7 @@ export class ProductListComponent
       .pipe(
         finalize(() => {
           this.isAddingCategory = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
@@ -261,6 +268,7 @@ export class ProductListComponent
       .pipe(
         finalize(() => {
           this.isSaving = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
@@ -306,11 +314,26 @@ export class ProductListComponent
           this.errorMessage =
             error?.error?.message ??
             'تعذر إيقاف المنتج';
+          this.safeDetectChanges();
         }
       });
   }
 
   goToPos(): void {
     this.router.navigateByUrl('/pos');
+  }
+
+  /**
+   * Angular isn't reliably re-rendering this view on its own after an
+   * HTTP call resolves, in this app's current build - see
+   * OpenShiftComponent.safeDetectChanges() for the full repro notes.
+   * Wrapped defensively against an already-destroyed view.
+   */
+  private safeDetectChanges(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      // View already destroyed - nothing to render.
+    }
   }
 }

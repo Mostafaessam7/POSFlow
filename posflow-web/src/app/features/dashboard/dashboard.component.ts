@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   OnInit,
   inject
@@ -32,6 +33,9 @@ export class DashboardComponent
   private readonly router =
     inject(Router);
 
+  private readonly cdr =
+    inject(ChangeDetectorRef);
+
   readonly canView =
     this.authService.hasAnyRole(Roles.Admin, Roles.Manager);
 
@@ -57,6 +61,7 @@ export class DashboardComponent
       .pipe(
         finalize(() => {
           this.isLoading = false;
+          this.safeDetectChanges();
         })
       )
       .subscribe({
@@ -74,5 +79,19 @@ export class DashboardComponent
 
   goBack(): void {
     this.router.navigateByUrl('/open-shift');
+  }
+
+  /**
+   * Angular isn't reliably re-rendering this view on its own after an
+   * HTTP call resolves, in this app's current build - see
+   * OpenShiftComponent.safeDetectChanges() for the full repro notes.
+   * Wrapped defensively against an already-destroyed view.
+   */
+  private safeDetectChanges(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      // View already destroyed - nothing to render.
+    }
   }
 }
