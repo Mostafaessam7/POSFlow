@@ -8,23 +8,35 @@
   background: var(--color-bg);
 }
 
+// Editorial diagonal-cut header band - bleeds to the page edges via
+// negative margins matching .dashboard-page's 32px padding, so it
+// reads as a print masthead, not a boxed toolbar.
 .page-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 26px;
+  margin: -32px -32px 28px;
+  padding: 30px 32px 42px;
+  background: var(--color-ink-line);
+  clip-path: polygon(0 0, 100% 0, 100% 80%, 0 100%);
 
   h1 {
     margin: 0;
-    font-size: 26px;
-    font-weight: 800;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: var(--color-bg);
   }
 
   p {
     margin: 6px 0 0;
-    color: var(--color-muted);
+    color: rgba(247, 242, 233, 0.62);
   }
+}
+
+.page-header .primary-button {
+  background: var(--color-accent);
 }
 
 .ghost-button {
@@ -129,7 +141,7 @@
 .split-bar {
   display: flex;
   height: 14px;
-  border-radius: 999px;
+  border-radius: 0;
   overflow: hidden;
   background: var(--color-surface-sunken);
   margin-bottom: 16px;

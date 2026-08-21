@@ -1,9 +1,13 @@
 /*
-  PosFlow design tokens.
-  Palette idea: a cash-register ticket, not a SaaS dashboard - warm
-  paper background, deep teal ("register green") for primary actions,
-  a warm amber for money/highlights, and a monospace face reserved
-  for order numbers and receipt-like figures.
+  PosFlow design tokens - "الإصدار المحرر" (Open Kitchen Editorial).
+  Palette idea: a bold print magazine, not a soft SaaS dashboard - warm
+  cream paper, near-black ink for structure and primary actions, a
+  single confident terracotta accent for money/highlights, flat
+  surfaces (no drop shadows - depth comes from rule lines and solid
+  color blocks instead), and sharp corners everywhere except the
+  signature pill shape reserved for primary call-to-action buttons.
+  A monospace face is still reserved for order numbers and
+  receipt-like figures.
 
   This file is also where the shared interaction layer lives: buttons,
   links, and cards across every page reuse the same class names
@@ -16,44 +20,50 @@
 
 :root {
   /* Surfaces */
-  --color-bg: #faf7f2;
+  --color-bg: #f7f2e9;
   --color-surface: #ffffff;
-  --color-surface-sunken: #f3ede2;
+  --color-surface-sunken: #efe6d4;
 
   /* Text */
-  --color-ink: #211f1c;
-  --color-muted: #7a7267;
-  --color-muted-light: #a39a8b;
+  --color-ink: #201c16;
+  --color-muted: #6b6255;
+  --color-muted-light: #a89e8e;
 
-  /* Borders */
-  --color-border: #e7dfd2;
-  --color-border-strong: #d8cfc0;
+  /* Borders - thin rule lines carry structure now that cards have no
+     shadow, so border-strong is a real dark line, not a faint tint. */
+  --color-border: #ece2d0;
+  --color-border-strong: #d9cdb6;
+  --color-ink-line: #201c16;
 
-  /* Brand */
-  --color-primary: #0b6e5a;
-  --color-primary-dark: #084c3f;
-  --color-primary-soft: #dceee7;
+  /* Brand - near-black ink instead of teal; the terracotta accent
+     below is the only color that gets to stand out. */
+  --color-primary: #201c16;
+  --color-primary-dark: #000000;
+  --color-primary-soft: #ece2d0;
 
-  /* Accent (money / highlights, used sparingly) */
-  --color-accent: #c98a2e;
-  --color-accent-soft: #f7e9d2;
+  /* Accent (money / highlights / the one signature color) */
+  --color-accent: #b9481e;
+  --color-accent-soft: #f4ded0;
 
   /* Status */
-  --color-danger: #b3401f;
-  --color-danger-soft: #f7e1d6;
-  --color-success: #0b6e5a;
-  --color-success-soft: #dceee7;
+  --color-danger: #a6371c;
+  --color-danger-soft: #f6ded0;
+  --color-success: #4f6b3f;
+  --color-success-soft: #e4ead9;
 
   /* Type */
   --font-ui: 'Tajawal', 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Shape */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --shadow-card: 0 8px 24px rgba(33, 31, 28, 0.06);
-  --shadow-card-lg: 0 12px 35px rgba(33, 31, 28, 0.1);
+  /* Shape - sharp by default; --radius-pill is the one deliberate
+     exception, reserved for primary call-to-action buttons so it
+     reads as a signature shape instead of a default control style. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-pill: 999px;
+  --shadow-card: none;
+  --shadow-card-lg: 0 2px 10px rgba(32, 28, 22, 0.1);
 
   /* Motion - one shared timing scale so every hover/press/fade feels
      like the same product, not a pile of ad-hoc numbers. */
