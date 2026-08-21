@@ -8,27 +8,40 @@
   background: var(--color-bg);
 }
 
+// Editorial diagonal-cut header band - bleeds to the page edges via
+// negative margins matching .history-page's 32px padding.
 .page-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 22px;
+  gap: 16px;
+  margin: -32px -32px 28px;
+  padding: 30px 32px 42px;
+  background: var(--color-ink-line);
+  clip-path: polygon(0 0, 100% 0, 100% 80%, 0 100%);
 
   h1 {
     margin: 0;
-    font-size: 26px;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: var(--color-bg);
   }
 
   p {
     margin: 6px 0 0;
-    color: var(--color-muted);
+    color: rgba(247, 242, 233, 0.62);
   }
+}
+
+.page-header .primary-button {
+  background: var(--color-accent);
 }
 
 .ghost-button {
   min-height: 44px;
   padding: 0 20px;
-  border-radius: 9px;
+  border-radius: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   color: var(--color-primary);
@@ -43,7 +56,7 @@
 
 .cashier-name {
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-accent-soft);
   color: var(--color-accent);
   font-size: 12px;
@@ -58,8 +71,8 @@
 
 .shift-card {
   background: var(--color-surface);
-  border-radius: 14px;
-  box-shadow: 0 6px 18px rgb(0 0 0 / 6%);
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -84,7 +97,7 @@
 
 .status-badge {
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: 0;
   font-size: 12px;
   font-weight: 600;
   background: var(--color-surface-sunken);
@@ -139,7 +152,7 @@
 
 .void-button {
   padding: 4px 12px;
-  border-radius: 7px;
+  border-radius: 0;
   border: 1px solid var(--color-danger);
   background: var(--color-surface);
   color: var(--color-danger);
@@ -149,7 +162,7 @@
 
 .voided-badge {
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-danger-soft);
   color: var(--color-danger);
   font-size: 11px;
@@ -166,7 +179,7 @@
   button {
     height: 38px;
     padding: 0 16px;
-    border-radius: 8px;
+    border-radius: 0;
     border: 1px solid var(--color-border-strong);
     background: var(--color-surface);
     cursor: pointer;
@@ -202,7 +215,7 @@
 .alert {
   margin-bottom: 18px;
   padding: 13px;
-  border-radius: 9px;
+  border-radius: 0;
 }
 
 .error {

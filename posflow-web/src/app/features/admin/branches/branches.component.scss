@@ -8,22 +8,34 @@
   background: var(--color-bg);
 }
 
+// Editorial diagonal-cut header band - bleeds to the page edges via
+// negative margins matching .branches-page's 32px padding.
 .page-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 22px;
+  margin: -32px -32px 28px;
+  padding: 30px 32px 42px;
+  background: var(--color-ink-line);
+  clip-path: polygon(0 0, 100% 0, 100% 80%, 0 100%);
 
   h1 {
     margin: 0;
-    font-size: 26px;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: var(--color-bg);
   }
 
   p {
     margin: 6px 0 0;
-    color: var(--color-muted);
+    color: rgba(247, 242, 233, 0.62);
   }
+}
+
+.page-header .primary-button {
+  background: var(--color-accent);
 }
 
 .header-actions {
@@ -35,14 +47,15 @@
 .ghost-button {
   min-height: 44px;
   padding: 0 20px;
-  border-radius: 9px;
+  border-radius: 0;
   font-size: 15px;
   cursor: pointer;
 }
 
 .primary-button {
   border: 0;
-  background: var(--color-primary);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
   color: var(--color-surface);
 }
 
@@ -60,9 +73,9 @@ button:disabled {
 .form-card {
   margin-bottom: 26px;
   padding: 24px;
-  border-radius: 14px;
+  border-radius: 0;
   background: var(--color-surface);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 8%);
+  box-shadow: none;
 
   h2 {
     margin: 0 0 18px;
@@ -92,7 +105,7 @@ button:disabled {
     height: 44px;
     padding: 0 12px;
     border: 1px solid var(--color-border-strong);
-    border-radius: 9px;
+    border-radius: 0;
     font-size: 15px;
   }
 }
@@ -116,9 +129,9 @@ button:disabled {
   width: 100%;
   border-collapse: collapse;
   background: var(--color-surface);
-  border-radius: 14px;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 6%);
+  box-shadow: none;
 
   th,
   td {
@@ -172,7 +185,7 @@ button:disabled {
 .badge {
   display: inline-block;
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: 0;
   font-size: 12px;
   font-weight: 600;
 }
@@ -196,7 +209,7 @@ button:disabled {
 .alert {
   margin-bottom: 18px;
   padding: 13px;
-  border-radius: 9px;
+  border-radius: 0;
 }
 
 .error {

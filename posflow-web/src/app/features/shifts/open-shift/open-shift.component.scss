@@ -16,7 +16,7 @@
   width: 100%;
   max-width: 560px;
   padding: 34px 30px 30px;
-  border-radius: 18px;
+  border-radius: 0;
   background: var(--color-surface);
   box-shadow: var(--shadow-card-lg);
   border-top: 4px solid var(--color-primary);
@@ -42,6 +42,8 @@ header {
   h1 {
     margin: 0;
     font-size: 28px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
   }
 
   p {
@@ -80,7 +82,7 @@ header {
     height: 48px;
     padding: 0 14px;
     border: 1px solid var(--color-border-strong);
-    border-radius: 9px;
+    border-radius: 0;
     font-size: 17px;
   }
 }
@@ -96,7 +98,7 @@ header {
   justify-content: space-between;
   gap: 20px;
   padding: 14px;
-  border-radius: 9px;
+  border-radius: 0;
   background: var(--color-surface-sunken);
 
   span {
@@ -109,14 +111,15 @@ header {
   width: 100%;
   min-height: 48px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 0;
   color: var(--color-surface);
   font-size: 16px;
   cursor: pointer;
 }
 
 .primary-button {
-  background: var(--color-primary);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
 }
 
 .danger-button {
@@ -131,7 +134,7 @@ button:disabled {
 .alert {
   margin-bottom: 18px;
   padding: 13px;
-  border-radius: 9px;
+  border-radius: 0;
 }
 
 .error {
