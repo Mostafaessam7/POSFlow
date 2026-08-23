@@ -1,23 +1,23 @@
-<div class="users-page" dir="rtl">
+<div class="users-page">
   <header class="page-header">
     <div>
-      <h1>المستخدمون</h1>
-      <p>إدارة الكاشيرية والمديرين</p>
+      <h1>{{ 'المستخدمون' | t }}</h1>
+      <p>{{ 'إدارة الكاشيرية والمديرين' | t }}</p>
     </div>
 
     <div class="header-actions">
       <button class="ghost-button" type="button" (click)="goBack()">
-        رجوع
+        {{ 'رجوع' | t }}
       </button>
 
       <button class="primary-button" type="button" (click)="openCreateForm()">
-        + إضافة مستخدم
+        + {{ 'إضافة مستخدم' | t }}
       </button>
     </div>
   </header>
 
   @if (errorMessage) {
-    <div class="alert error">{{ errorMessage }}</div>
+    <div class="alert error">{{ errorMessage | t }}</div>
   }
 
   <label class="toggle-inactive">
@@ -26,56 +26,56 @@
       [checked]="showInactive"
       (change)="toggleShowInactive()"
     />
-    عرض المستخدمين الموقوفين أيضًا
+    {{ 'عرض المستخدمين الموقوفين أيضًا' | t }}
   </label>
 
   @if (isFormOpen) {
     <section class="form-card">
-      <h2>{{ editingId ? 'تعديل مستخدم' : 'إضافة مستخدم جديد' }}</h2>
+      <h2>{{ (editingId ? 'تعديل مستخدم' : 'إضافة مستخدم جديد') | t }}</h2>
 
       <form [formGroup]="form" (ngSubmit)="save()">
         <div class="form-row">
           <div class="form-group">
-            <label for="username">اسم المستخدم</label>
+            <label for="username">{{ 'اسم المستخدم' | t }}</label>
             <input id="username" type="text" formControlName="username" />
 
             @if (
               form.controls.username.touched &&
               form.controls.username.invalid
             ) {
-              <span class="validation-error">اسم المستخدم مطلوب</span>
+              <span class="validation-error">{{ 'اسم المستخدم مطلوب' | t }}</span>
             }
           </div>
 
           <div class="form-group">
-            <label for="displayName">الاسم</label>
+            <label for="displayName">{{ 'الاسم' | t }}</label>
             <input id="displayName" type="text" formControlName="displayName" />
 
             @if (
               form.controls.displayName.touched &&
               form.controls.displayName.invalid
             ) {
-              <span class="validation-error">الاسم مطلوب</span>
+              <span class="validation-error">{{ 'الاسم مطلوب' | t }}</span>
             }
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="email">الإيميل (اختياري - لإعادة تعيين كلمة المرور)</label>
+            <label for="email">{{ 'الإيميل (اختياري - لإعادة تعيين كلمة المرور)' | t }}</label>
             <input id="email" type="email" formControlName="email" />
 
             @if (
               form.controls.email.touched &&
               form.controls.email.invalid
             ) {
-              <span class="validation-error">صيغة الإيميل غير صحيحة</span>
+              <span class="validation-error">{{ 'صيغة الإيميل غير صحيحة' | t }}</span>
             }
           </div>
 
           @if (!editingId) {
             <div class="form-group">
-              <label for="password">كلمة المرور</label>
+              <label for="password">{{ 'كلمة المرور' | t }}</label>
               <input id="password" type="password" formControlName="password" />
 
               @if (
@@ -83,7 +83,7 @@
                 form.controls.password.invalid
               ) {
                 <span class="validation-error">
-                  كلمة المرور 6 أحرف على الأقل
+                  {{ 'كلمة المرور 6 أحرف على الأقل' | t }}
                 </span>
               }
             </div>
@@ -92,18 +92,18 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="role">الدور</label>
+            <label for="role">{{ 'الدور' | t }}</label>
             <select id="role" formControlName="role">
-              <option value="Cashier">كاشير</option>
-              <option value="Manager">مدير فرع</option>
-              <option value="Admin">أدمن</option>
+              <option value="Cashier">{{ 'كاشير' | t }}</option>
+              <option value="Manager">{{ 'مدير فرع' | t }}</option>
+              <option value="Admin">{{ 'أدمن' | t }}</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="branchId">الفرع</label>
+            <label for="branchId">{{ 'الفرع' | t }}</label>
             <select id="branchId" formControlName="branchId">
-              <option value="">كل الفروع (أدمن)</option>
+              <option value="">{{ 'كل الفروع (أدمن)' | t }}</option>
               @for (branch of branches; track branch.id) {
                 <option [value]="branch.id">{{ branch.name }}</option>
               }
@@ -114,17 +114,17 @@
         @if (editingId) {
           <label class="checkbox-label">
             <input type="checkbox" formControlName="isActive" />
-            الحساب مفعّل
+            {{ 'الحساب مفعّل' | t }}
           </label>
         }
 
         <div class="form-actions">
           <button class="primary-button" type="submit" [disabled]="isSaving">
-            @if (isSaving) { <span class="spinner" aria-hidden="true"></span> جاري الحفظ... } @else { حفظ }
+            @if (isSaving) { <span class="spinner" aria-hidden="true"></span> {{ 'جاري الحفظ...' | t }} } @else { {{ 'حفظ' | t }} }
           </button>
 
           <button class="ghost-button" type="button" (click)="cancelForm()">
-            إلغاء
+            {{ 'إلغاء' | t }}
           </button>
         </div>
       </form>
@@ -132,18 +132,18 @@
   }
 
   @if (isLoading) {
-    <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>تحميل المستخدمين...</div>
+    <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>{{ 'تحميل المستخدمين...' | t }}</div>
   }
 
   @if (!isLoading) {
     <table class="data-table">
       <thead>
         <tr>
-          <th>الاسم</th>
-          <th>اسم المستخدم</th>
-          <th>الدور</th>
-          <th>الفرع</th>
-          <th>الحالة</th>
+          <th>{{ 'الاسم' | t }}</th>
+          <th>{{ 'اسم المستخدم' | t }}</th>
+          <th>{{ 'الدور' | t }}</th>
+          <th>{{ 'الفرع' | t }}</th>
+          <th>{{ 'الحالة' | t }}</th>
           <th></th>
         </tr>
       </thead>
@@ -154,18 +154,18 @@
             <td>
               <strong>{{ user.displayName }}</strong>
               @if (isSelf(user)) {
-                <span class="you-badge">أنت</span>
+                <span class="you-badge">{{ 'أنت' | t }}</span>
               }
             </td>
             <td>{{ user.username }}</td>
             <td>{{ user.role }}</td>
-            <td>{{ branchName(user.branchId) }}</td>
+            <td>{{ branchName(user.branchId) | t }}</td>
             <td>
               <span
                 class="badge"
                 [class.badge-active]="user.isActive"
                 [class.badge-inactive]="!user.isActive">
-                {{ user.isActive ? 'مفعّل' : 'موقوف' }}
+                {{ (user.isActive ? 'مفعّل' : 'موقوف') | t }}
               </span>
             </td>
             <td class="row-actions">
@@ -173,14 +173,14 @@
                 class="link-button"
                 type="button"
                 (click)="openEditForm(user)">
-                تعديل
+                {{ 'تعديل' | t }}
               </button>
 
               <button
                 class="link-button"
                 type="button"
                 (click)="openResetPassword(user)">
-                تغيير كلمة المرور
+                {{ 'تغيير كلمة المرور' | t }}
               </button>
             </td>
           </tr>
@@ -191,7 +191,7 @@
                 <div class="reset-password-inline">
                   <input
                     type="password"
-                    placeholder="كلمة المرور الجديدة"
+                    [placeholder]="'كلمة المرور الجديدة' | t"
                     [(ngModel)]="newPassword"
                     [ngModelOptions]="{ standalone: true }"
                   />
@@ -201,14 +201,14 @@
                     type="button"
                     [disabled]="isResettingPassword"
                     (click)="submitResetPassword()">
-                    حفظ
+                    {{ 'حفظ' | t }}
                   </button>
 
                   <button
                     class="ghost-button small"
                     type="button"
                     (click)="cancelResetPassword()">
-                    إلغاء
+                    {{ 'إلغاء' | t }}
                   </button>
                 </div>
               </td>
@@ -216,7 +216,7 @@
           }
         } @empty {
           <tr>
-            <td colspan="6" class="empty">لا يوجد مستخدمون بعد</td>
+            <td colspan="6" class="empty">{{ 'لا يوجد مستخدمون بعد' | t }}</td>
           </tr>
         }
       </tbody>

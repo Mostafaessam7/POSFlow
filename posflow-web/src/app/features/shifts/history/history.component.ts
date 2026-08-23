@@ -17,11 +17,13 @@ import { ShiftService } from '../shift.service';
 import { ShiftResponse } from '../shift.models';
 import { OrderService } from '../../pos/order.service';
 import { OrderResponse } from '../../pos/order.models';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { TranslationService } from '../../../core/i18n/translation.service';
 
 @Component({
   selector: 'app-history',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   templateUrl: './history.component.html',
   styleUrl: './history.component.scss'
 })
@@ -48,6 +50,9 @@ export class HistoryComponent
 
   private readonly cdr =
     inject(ChangeDetectorRef);
+
+  private readonly translationService =
+    inject(TranslationService);
 
   readonly canViewBranch =
     this.authService.hasAnyRole(Roles.Admin, Roles.Manager);
@@ -162,7 +167,9 @@ export class HistoryComponent
     }
 
     const reason = await this.confirmDialog.prompt(
-      `هيتم إلغاء الفاتورة رقم ${order.orderNumber}. اكتب سبب الإلغاء:`,
+      this.translationService.t('هيتم إلغاء الفاتورة رقم') +
+        ` ${order.orderNumber}. ` +
+        this.translationService.t('اكتب سبب الإلغاء:'),
       {
         title: 'إلغاء فاتورة',
         confirmLabel: 'إلغاء الفاتورة',

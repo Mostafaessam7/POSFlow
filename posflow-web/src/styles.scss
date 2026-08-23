@@ -72,6 +72,38 @@
   --duration-base: 180ms;
 }
 
+/* Dark mode - same editorial system, inverted: warm near-black paper
+   instead of cream, the terracotta accent brightened a shade so it
+   still pops on a dark surface. ThemeService stamps data-theme on
+   <html> before first paint (see app.ts), so there's no flash. */
+:root[data-theme='dark'] {
+  --color-bg: #1c1810;
+  --color-surface: #262019;
+  --color-surface-sunken: #14110c;
+
+  --color-ink: #f5efe4;
+  --color-muted: #a89e8e;
+  --color-muted-light: #756c5f;
+
+  --color-border: #3a342a;
+  --color-border-strong: #4d4536;
+  --color-ink-line: #0d0b07;
+
+  --color-primary: #f5efe4;
+  --color-primary-dark: #ffffff;
+  --color-primary-soft: #3a342a;
+
+  --color-accent: #dd8551;
+  --color-accent-soft: #3a2a1c;
+
+  --color-danger: #e0765a;
+  --color-danger-soft: #3a2019;
+  --color-success: #86a86a;
+  --color-success-soft: #263019;
+
+  --shadow-card-lg: 0 2px 14px rgba(0, 0, 0, 0.5);
+}
+
 * {
   box-sizing: border-box;
 }

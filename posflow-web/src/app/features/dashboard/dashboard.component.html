@@ -1,43 +1,43 @@
-<div class="dashboard-page" dir="rtl">
+<div class="dashboard-page">
   <header class="page-header">
     <div>
-      <h1>لوحة المبيعات</h1>
-      <p>ملخص أداء الفرع اليوم</p>
+      <h1>{{ 'لوحة المبيعات' | t }}</h1>
+      <p>{{ 'ملخص أداء الفرع اليوم' | t }}</p>
     </div>
 
     <button class="ghost-button" type="button" (click)="goBack()">
-      رجوع
+      {{ 'رجوع' | t }}
     </button>
   </header>
 
   @if (errorMessage) {
-    <div class="alert error">{{ errorMessage }}</div>
+    <div class="alert error">{{ errorMessage | t }}</div>
   }
 
   @if (isLoading) {
-    <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>تحميل الملخص...</div>
+    <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>{{ 'تحميل الملخص...' | t }}</div>
   }
 
   @if (!isLoading && summary) {
     <section class="hero-card">
-      <span class="eyebrow">إجمالي مبيعات اليوم</span>
+      <span class="eyebrow">{{ 'إجمالي مبيعات اليوم' | t }}</span>
       <span class="hero-number">{{ summary.totalSales | number:'1.2-2' }}</span>
 
       <div class="hero-stats">
         <div class="stat">
           <span class="stat-value">{{ summary.orderCount }}</span>
-          <span class="stat-label">فاتورة</span>
+          <span class="stat-label">{{ 'فاتورة' | t }}</span>
         </div>
 
         <div class="stat">
           <span class="stat-value">{{ summary.averageTicket | number:'1.2-2' }}</span>
-          <span class="stat-label">متوسط الفاتورة</span>
+          <span class="stat-label">{{ 'متوسط الفاتورة' | t }}</span>
         </div>
 
         @if (summary.voidedOrderCount > 0) {
           <div class="stat">
             <span class="stat-value voided">{{ summary.voidedOrderCount }}</span>
-            <span class="stat-label">فاتورة ملغاة</span>
+            <span class="stat-label">{{ 'فاتورة ملغاة' | t }}</span>
           </div>
         }
       </div>
@@ -45,7 +45,7 @@
 
     <div class="cards-row">
       <section class="split-card">
-        <h2>طرق الدفع</h2>
+        <h2>{{ 'طرق الدفع' | t }}</h2>
 
         @if (summary.totalSales > 0) {
           <div class="split-bar">
@@ -63,23 +63,23 @@
         <div class="split-legend">
           <div class="legend-item">
             <span class="dot cash"></span>
-            نقدي
+            {{ 'نقدي' | t }}
             <strong>{{ summary.cashSales | number:'1.2-2' }}</strong>
           </div>
 
           <div class="legend-item">
             <span class="dot card"></span>
-            بطاقة
+            {{ 'بطاقة' | t }}
             <strong>{{ summary.cardSales | number:'1.2-2' }}</strong>
           </div>
         </div>
       </section>
 
       <section class="top-products-card">
-        <h2>الأكثر مبيعًا اليوم</h2>
+        <h2>{{ 'الأكثر مبيعًا اليوم' | t }}</h2>
 
         @if (summary.topProducts.length === 0) {
-          <div class="empty">لا توجد مبيعات بعد</div>
+          <div class="empty">{{ 'لا توجد مبيعات بعد' | t }}</div>
         }
 
         <ol class="top-products-list">

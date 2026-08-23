@@ -20,13 +20,15 @@ import { ShiftResponse } from '../shift.models';
 import { ShiftService } from '../shift.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { Roles } from '../../../core/auth/roles';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-open-shift',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    TranslatePipe
   ],
   templateUrl: './open-shift.component.html',
   styleUrl: './open-shift.component.scss'
@@ -64,6 +66,7 @@ export class OpenShiftComponent
 
   errorMessage = '';
   successMessage = '';
+  closedCashDifference: number | null = null;
 
   readonly openForm =
     this.formBuilder.nonNullable.group({
@@ -202,9 +205,12 @@ loadCurrentShift(): void {
       )
       .subscribe({
         next: closedShift => {
-          this.successMessage =
-            `تم إغلاق الوردية. فرق النقدية: ` +
-            `${closedShift.cashDifference ?? 0}`;
+          // Kept as a translatable label + a separate numeric value
+          // (not one interpolated string) so the "| t" pipe in the
+          // template has a stable, exact key to look up regardless of
+          // what the cash difference number is.
+          this.successMessage = 'تم إغلاق الوردية. فرق النقدية:';
+          this.closedCashDifference = closedShift.cashDifference ?? 0;
 
           this.currentShift = null;
 

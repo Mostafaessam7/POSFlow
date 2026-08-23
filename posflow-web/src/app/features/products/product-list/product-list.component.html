@@ -1,8 +1,8 @@
-<div class="products-page" dir="rtl">
+<div class="products-page">
   <header class="page-header">
     <div>
-      <h1>المنتجات</h1>
-      <p>كتالوج المنتجات المتاحة للبيع ({{ totalCount }} منتج)</p>
+      <h1>{{ 'المنتجات' | t }}</h1>
+      <p>{{ 'كتالوج المنتجات المتاحة للبيع' | t }} ({{ totalCount }} {{ 'منتج' | t }})</p>
     </div>
 
     <div class="header-actions">
@@ -10,7 +10,7 @@
         class="ghost-button"
         type="button"
         (click)="goToPos()">
-        الانتقال إلى نقطة البيع
+        {{ 'الانتقال إلى نقطة البيع' | t }}
       </button>
 
       @if (canManage) {
@@ -18,7 +18,7 @@
           class="primary-button"
           type="button"
           (click)="openCreateForm()">
-          + إضافة منتج
+          + {{ 'إضافة منتج' | t }}
         </button>
       }
     </div>
@@ -26,7 +26,7 @@
 
   @if (errorMessage) {
     <div class="alert error">
-      {{ errorMessage }}
+      {{ errorMessage | t }}
     </div>
   }
 
@@ -34,7 +34,7 @@
     <select
       class="category-filter"
       (change)="onCategoryFilterChange($any($event.target).value)">
-      <option value="">كل التصنيفات</option>
+      <option value="">{{ 'كل التصنيفات' | t }}</option>
       @for (category of categories; track category.id) {
         <option [value]="category.id">{{ category.nameAr }}</option>
       }
@@ -47,19 +47,19 @@
           [checked]="showInactive"
           (change)="toggleShowInactive()"
         />
-        عرض المنتجات الموقوفة أيضًا
+        {{ 'عرض المنتجات الموقوفة أيضًا' | t }}
       </label>
     }
   </div>
 
   @if (isFormOpen) {
     <section class="product-form-card">
-      <h2>{{ editingId ? 'تعديل منتج' : 'إضافة منتج جديد' }}</h2>
+      <h2>{{ (editingId ? 'تعديل منتج' : 'إضافة منتج جديد') | t }}</h2>
 
       <form [formGroup]="form" (ngSubmit)="save()">
         <div class="form-row">
           <div class="form-group">
-            <label for="nameAr">الاسم بالعربي</label>
+            <label for="nameAr">{{ 'الاسم بالعربي' | t }}</label>
             <input id="nameAr" type="text" formControlName="nameAr" />
 
             @if (
@@ -67,25 +67,25 @@
               form.controls.nameAr.invalid
             ) {
               <span class="validation-error">
-                اسم المنتج مطلوب
+                {{ 'اسم المنتج مطلوب' | t }}
               </span>
             }
           </div>
 
           <div class="form-group">
-            <label for="nameEn">الاسم بالإنجليزي (اختياري)</label>
+            <label for="nameEn">{{ 'الاسم بالإنجليزي (اختياري)' | t }}</label>
             <input id="nameEn" type="text" formControlName="nameEn" />
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="barcode">الباركود (اختياري)</label>
+            <label for="barcode">{{ 'الباركود (اختياري)' | t }}</label>
             <input id="barcode" type="text" formControlName="barcode" />
           </div>
 
           <div class="form-group">
-            <label for="price">السعر</label>
+            <label for="price">{{ 'السعر' | t }}</label>
             <input
               id="price"
               type="number"
@@ -99,7 +99,7 @@
               form.controls.price.invalid
             ) {
               <span class="validation-error">
-                السعر يجب أن يكون أكبر من صفر
+                {{ 'السعر يجب أن يكون أكبر من صفر' | t }}
               </span>
             }
           </div>
@@ -107,9 +107,9 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="categoryId">التصنيف (اختياري)</label>
+            <label for="categoryId">{{ 'التصنيف (اختياري)' | t }}</label>
             <select id="categoryId" formControlName="categoryId">
-              <option value="">بدون تصنيف</option>
+              <option value="">{{ 'بدون تصنيف' | t }}</option>
               @for (category of categories; track category.id) {
                 <option [value]="category.id">{{ category.nameAr }}</option>
               }
@@ -118,7 +118,7 @@
             <div class="add-category-row">
               <input
                 type="text"
-                placeholder="تصنيف جديد..."
+                [placeholder]="'تصنيف جديد...' | t"
                 [(ngModel)]="newCategoryName"
                 [ngModelOptions]="{ standalone: true }"
               />
@@ -126,7 +126,7 @@
                 type="button"
                 [disabled]="isAddingCategory"
                 (click)="addCategory()">
-                + إضافة
+                + {{ 'إضافة' | t }}
               </button>
             </div>
           </div>
@@ -134,7 +134,7 @@
           <div class="form-group stock-group">
             <label class="checkbox-label">
               <input type="checkbox" formControlName="trackStock" />
-              تتبع كمية المخزون لهذا المنتج
+              {{ 'تتبع كمية المخزون لهذا المنتج' | t }}
             </label>
 
             @if (form.controls.trackStock.value) {
@@ -143,7 +143,7 @@
                 min="0"
                 step="1"
                 formControlName="stockQuantity"
-                placeholder="الكمية المتاحة"
+                [placeholder]="'الكمية المتاحة' | t"
               />
             }
           </div>
@@ -156,9 +156,9 @@
             [disabled]="isSaving">
             @if (isSaving) {
               <span class="spinner" aria-hidden="true"></span>
-              جاري الحفظ...
+              {{ 'جاري الحفظ...' | t }}
             } @else {
-              حفظ
+              {{ 'حفظ' | t }}
             }
           </button>
 
@@ -166,7 +166,7 @@
             class="ghost-button"
             type="button"
             (click)="cancelForm()">
-            إلغاء
+            {{ 'إلغاء' | t }}
           </button>
         </div>
       </form>
@@ -174,19 +174,19 @@
   }
 
   @if (isLoading) {
-    <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>تحميل المنتجات...</div>
+    <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>{{ 'تحميل المنتجات...' | t }}</div>
   }
 
   @if (!isLoading) {
     <table class="products-table">
       <thead>
         <tr>
-          <th>الاسم</th>
-          <th>التصنيف</th>
-          <th>الباركود</th>
-          <th>السعر</th>
-          <th>المخزون</th>
-          <th>الحالة</th>
+          <th>{{ 'الاسم' | t }}</th>
+          <th>{{ 'التصنيف' | t }}</th>
+          <th>{{ 'الباركود' | t }}</th>
+          <th>{{ 'السعر' | t }}</th>
+          <th>{{ 'المخزون' | t }}</th>
+          <th>{{ 'الحالة' | t }}</th>
           @if (canManage) {
             <th></th>
           }
@@ -211,7 +211,7 @@
                   {{ product.stockQuantity }}
                 </span>
               } @else {
-                <span class="muted">غير متتبع</span>
+                <span class="muted">{{ 'غير متتبع' | t }}</span>
               }
             </td>
             <td>
@@ -219,7 +219,7 @@
                 class="badge"
                 [class.badge-active]="product.isActive"
                 [class.badge-inactive]="!product.isActive">
-                {{ product.isActive ? 'متاح' : 'موقوف' }}
+                {{ (product.isActive ? 'متاح' : 'موقوف') | t }}
               </span>
             </td>
             @if (canManage) {
@@ -228,7 +228,7 @@
                   class="link-button"
                   type="button"
                   (click)="openEditForm(product)">
-                  تعديل
+                  {{ 'تعديل' | t }}
                 </button>
 
                 @if (product.isActive) {
@@ -236,7 +236,7 @@
                     class="link-button danger"
                     type="button"
                     (click)="deactivate(product)">
-                    إيقاف
+                    {{ 'إيقاف' | t }}
                   </button>
                 }
               </td>
@@ -245,7 +245,7 @@
         } @empty {
           <tr>
             <td [attr.colspan]="canManage ? 7 : 6" class="empty">
-              لا توجد منتجات بعد
+              {{ 'لا توجد منتجات بعد' | t }}
             </td>
           </tr>
         }
@@ -258,16 +258,16 @@
           [disabled]="page <= 1"
           type="button"
           (click)="goToPage(page - 1)">
-          السابق
+          {{ 'السابق' | t }}
         </button>
 
-        <span>صفحة {{ page }} من {{ totalPages }}</span>
+        <span>{{ 'صفحة' | t }} {{ page }} {{ 'من' | t }} {{ totalPages }}</span>
 
         <button
           [disabled]="page >= totalPages"
           type="button"
           (click)="goToPage(page + 1)">
-          التالي
+          {{ 'التالي' | t }}
         </button>
       </div>
     }

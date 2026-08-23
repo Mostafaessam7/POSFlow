@@ -23,6 +23,8 @@ import { ToastService } from '../../../shared/toast/toast.service';
 import { ConfirmDialogService } from '../../../shared/confirm-dialog/confirm-dialog.service';
 import { CategoryResponse, ProductResponse } from '../product.models';
 import { ProductService } from '../product.service';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { TranslationService } from '../../../core/i18n/translation.service';
 
 @Component({
   selector: 'app-product-list',
@@ -30,7 +32,8 @@ import { ProductService } from '../product.service';
   imports: [
     CommonModule,
     FormsModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    TranslatePipe
   ],
   templateUrl: './product-list.component.html',
   styleUrl: './product-list.component.scss'
@@ -58,6 +61,9 @@ export class ProductListComponent
 
   private readonly cdr =
     inject(ChangeDetectorRef);
+
+  private readonly translationService =
+    inject(TranslationService);
 
   readonly canManage =
     this.authService.hasAnyRole(Roles.Admin, Roles.Manager);
@@ -294,7 +300,8 @@ export class ProductListComponent
 
   async deactivate(product: ProductResponse): Promise<void> {
     const confirmed = await this.confirmDialog.confirm(
-      `هل تريد إيقاف المنتج "${product.nameAr}"؟`,
+      this.translationService.t('هل تريد إيقاف المنتج') +
+        ` "${product.nameAr}"؟`,
       { danger: true, confirmLabel: 'إيقاف' }
     );
 

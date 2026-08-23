@@ -1,46 +1,46 @@
-<div class="branches-page" dir="rtl">
+<div class="branches-page">
   <header class="page-header">
     <div>
-      <h1>الفروع</h1>
-      <p>إدارة فروع المنشأة</p>
+      <h1>{{ 'الفروع' | t }}</h1>
+      <p>{{ 'إدارة فروع المنشأة' | t }}</p>
     </div>
 
     <div class="header-actions">
       <button class="ghost-button" type="button" (click)="goBack()">
-        رجوع
+        {{ 'رجوع' | t }}
       </button>
 
       <button class="primary-button" type="button" (click)="openCreateForm()">
-        + إضافة فرع
+        + {{ 'إضافة فرع' | t }}
       </button>
     </div>
   </header>
 
   @if (errorMessage) {
-    <div class="alert error">{{ errorMessage }}</div>
+    <div class="alert error">{{ errorMessage | t }}</div>
   }
 
   @if (isFormOpen) {
     <section class="form-card">
-      <h2>{{ editingId ? 'تعديل فرع' : 'إضافة فرع جديد' }}</h2>
+      <h2>{{ (editingId ? 'تعديل فرع' : 'إضافة فرع جديد') | t }}</h2>
 
       <form [formGroup]="form" (ngSubmit)="save()">
         <div class="form-row">
           <div class="form-group">
-            <label for="name">اسم الفرع</label>
+            <label for="name">{{ 'اسم الفرع' | t }}</label>
             <input id="name" type="text" formControlName="name" />
 
             @if (form.controls.name.touched && form.controls.name.invalid) {
-              <span class="validation-error">اسم الفرع مطلوب</span>
+              <span class="validation-error">{{ 'اسم الفرع مطلوب' | t }}</span>
             }
           </div>
 
           <div class="form-group">
-            <label for="code">كود الفرع</label>
+            <label for="code">{{ 'كود الفرع' | t }}</label>
             <input id="code" type="text" formControlName="code" />
 
             @if (form.controls.code.touched && form.controls.code.invalid) {
-              <span class="validation-error">كود الفرع مطلوب</span>
+              <span class="validation-error">{{ 'كود الفرع مطلوب' | t }}</span>
             }
           </div>
         </div>
@@ -48,17 +48,17 @@
         @if (editingId) {
           <label class="checkbox-label">
             <input type="checkbox" formControlName="isActive" />
-            الفرع مفعّل
+            {{ 'الفرع مفعّل' | t }}
           </label>
         }
 
         <div class="form-actions">
           <button class="primary-button" type="submit" [disabled]="isSaving">
-            @if (isSaving) { <span class="spinner" aria-hidden="true"></span> جاري الحفظ... } @else { حفظ }
+            @if (isSaving) { <span class="spinner" aria-hidden="true"></span> {{ 'جاري الحفظ...' | t }} } @else { {{ 'حفظ' | t }} }
           </button>
 
           <button class="ghost-button" type="button" (click)="cancelForm()">
-            إلغاء
+            {{ 'إلغاء' | t }}
           </button>
         </div>
       </form>
@@ -66,16 +66,16 @@
   }
 
   @if (isLoading) {
-    <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>تحميل الفروع...</div>
+    <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>{{ 'تحميل الفروع...' | t }}</div>
   }
 
   @if (!isLoading) {
     <table class="data-table">
       <thead>
         <tr>
-          <th>الاسم</th>
-          <th>الكود</th>
-          <th>الحالة</th>
+          <th>{{ 'الاسم' | t }}</th>
+          <th>{{ 'الكود' | t }}</th>
+          <th>{{ 'الحالة' | t }}</th>
           <th></th>
         </tr>
       </thead>
@@ -90,7 +90,7 @@
                 class="badge"
                 [class.badge-active]="branch.isActive"
                 [class.badge-inactive]="!branch.isActive">
-                {{ branch.isActive ? 'مفعّل' : 'موقوف' }}
+                {{ (branch.isActive ? 'مفعّل' : 'موقوف') | t }}
               </span>
             </td>
             <td class="row-actions">
@@ -98,13 +98,13 @@
                 class="link-button"
                 type="button"
                 (click)="openEditForm(branch)">
-                تعديل
+                {{ 'تعديل' | t }}
               </button>
             </td>
           </tr>
         } @empty {
           <tr>
-            <td colspan="4" class="empty">لا توجد فروع بعد</td>
+            <td colspan="4" class="empty">{{ 'لا توجد فروع بعد' | t }}</td>
           </tr>
         }
       </tbody>

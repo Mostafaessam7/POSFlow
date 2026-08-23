@@ -13,11 +13,12 @@ import { AuthService } from '../../core/auth/auth.service';
 import { Roles } from '../../core/auth/roles';
 import { DailySummaryResponse } from './report.models';
 import { ReportService } from './report.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })

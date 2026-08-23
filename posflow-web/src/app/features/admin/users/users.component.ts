@@ -24,6 +24,7 @@ import { BranchResponse } from '../branches/branch.models';
 import { BranchService } from '../branches/branch.service';
 import { UserResponse } from './user.models';
 import { UserService } from './user.service';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-users',
@@ -31,7 +32,8 @@ import { UserService } from './user.service';
   imports: [
     CommonModule,
     FormsModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    TranslatePipe
   ],
   templateUrl: './users.component.html',
   styleUrl: './users.component.scss'

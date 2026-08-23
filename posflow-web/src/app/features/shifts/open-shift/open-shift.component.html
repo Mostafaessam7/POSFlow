@@ -1,10 +1,10 @@
-<div class="shift-page" dir="rtl">
+<div class="shift-page">
   <section class="shift-card">
     <header>
       <div>
         <span class="wordmark">POSFLOW</span>
-        <h1>إدارة الوردية</h1>
-        <p>فتح وإغلاق وردية الكاشير</p>
+        <h1>{{ 'إدارة الوردية' | t }}</h1>
+        <p>{{ 'فتح وإغلاق وردية الكاشير' | t }}</p>
       </div>
 
       <div class="header-links">
@@ -13,7 +13,7 @@
             class="text-link"
             type="button"
             (click)="goToDashboard()">
-            لوحة المبيعات
+            {{ 'لوحة المبيعات' | t }}
           </button>
         }
 
@@ -22,14 +22,14 @@
             class="text-link"
             type="button"
             (click)="goToUsers()">
-            المستخدمون
+            {{ 'المستخدمون' | t }}
           </button>
 
           <button
             class="text-link"
             type="button"
             (click)="goToBranches()">
-            الفروع
+            {{ 'الفروع' | t }}
           </button>
         }
 
@@ -37,14 +37,14 @@
           class="text-link"
           type="button"
           (click)="goToHistory()">
-          سجل الورديات
+          {{ 'سجل الورديات' | t }}
         </button>
 
         <button
           class="text-link"
           type="button"
           (click)="logout()">
-          تسجيل الخروج
+          {{ 'تسجيل الخروج' | t }}
         </button>
       </div>
     </header>
@@ -52,19 +52,19 @@
     @if (isLoading) {
       <div class="message loading-message">
         <span class="spinner" aria-hidden="true"></span>
-        تحميل بيانات الوردية...
+        {{ 'تحميل بيانات الوردية...' | t }}
       </div>
     }
 
     @if (errorMessage) {
       <div class="alert error">
-        {{ errorMessage }}
+        {{ errorMessage | t }}
       </div>
     }
 
     @if (successMessage) {
       <div class="alert success">
-        {{ successMessage }}
+        {{ successMessage | t }} {{ closedCashDifference }}
       </div>
     }
 
@@ -75,7 +75,7 @@
 
         <div class="form-group">
           <label for="openingCash">
-            النقدية الافتتاحية
+            {{ 'النقدية الافتتاحية' | t }}
           </label>
 
           <input
@@ -91,7 +91,7 @@
             openForm.controls.openingCash.invalid
           ) {
             <span class="validation-error">
-              أدخل قيمة صحيحة لا تقل عن صفر
+              {{ 'أدخل قيمة صحيحة لا تقل عن صفر' | t }}
             </span>
           }
         </div>
@@ -103,9 +103,9 @@
 
           @if (isSubmitting) {
             <span class="spinner" aria-hidden="true"></span>
-            جاري فتح الوردية...
+            {{ 'جاري فتح الوردية...' | t }}
           } @else {
-            فتح الوردية
+            {{ 'فتح الوردية' | t }}
           }
         </button>
       </form>
@@ -114,19 +114,19 @@
     @if (!isLoading && currentShift) {
       <div class="shift-details">
         <div class="detail">
-          <span>حالة الوردية</span>
-          <strong>مفتوحة</strong>
+          <span>{{ 'حالة الوردية' | t }}</span>
+          <strong>{{ 'مفتوحة' | t }}</strong>
         </div>
 
         <div class="detail">
-          <span>النقدية الافتتاحية</span>
+          <span>{{ 'النقدية الافتتاحية' | t }}</span>
           <strong>
             {{ currentShift.openingCash | number:'1.2-2' }}
           </strong>
         </div>
 
         <div class="detail">
-          <span>وقت الفتح</span>
+          <span>{{ 'وقت الفتح' | t }}</span>
           <strong>
             {{ currentShift.openedAtUtc | date:'medium' }}
           </strong>
@@ -138,7 +138,7 @@
         type="button"
         (click)="continueToPos()">
 
-        الانتقال إلى نقطة البيع
+        {{ 'الانتقال إلى نقطة البيع' | t }}
       </button>
 
       <hr />
@@ -149,7 +149,7 @@
 
         <div class="form-group">
           <label for="closingCash">
-            النقدية الفعلية في الدرج
+            {{ 'النقدية الفعلية في الدرج' | t }}
           </label>
 
           <input
@@ -168,9 +168,9 @@
 
           @if (isSubmitting) {
             <span class="spinner" aria-hidden="true"></span>
-            جاري إغلاق الوردية...
+            {{ 'جاري إغلاق الوردية...' | t }}
           } @else {
-            إغلاق الوردية
+            {{ 'إغلاق الوردية' | t }}
           }
         </button>
       </form>
