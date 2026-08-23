@@ -2,19 +2,20 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { ToastService } from './toast.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-toast',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   template: `
-    <div class="toast-stack" dir="rtl" role="status" aria-live="polite">
+    <div class="toast-stack" role="status" aria-live="polite">
       @for (toast of toastService.toasts(); track toast.id) {
         <div class="toast" [class.error]="toast.type === 'error'">
-          <span>{{ toast.message }}</span>
+          <span>{{ toast.message | t }}</span>
           <button
             type="button"
-            aria-label="إغلاق الإشعار"
+            [attr.aria-label]="'إغلاق الإشعار' | t"
             (click)="toastService.dismiss(toast.id)">×</button>
         </div>
       }

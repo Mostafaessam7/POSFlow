@@ -26,12 +26,15 @@ import {
   AuthService
 } from '../../core/auth/auth.service';
 
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    TranslatePipe
   ],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'

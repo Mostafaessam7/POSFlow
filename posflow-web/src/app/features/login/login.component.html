@@ -1,8 +1,8 @@
-<div class="login-page" dir="rtl">
+<div class="login-page">
   <div class="login-card">
     <div class="brand">
       <h1>PosFlow</h1>
-      <p>نظام إدارة نقاط البيع</p>
+      <p>{{ 'نظام إدارة نقاط البيع' | t }}</p>
     </div>
 
     <form
@@ -11,14 +11,14 @@
 
       <div class="form-group">
         <label for="username">
-          اسم المستخدم
+          {{ 'اسم المستخدم' | t }}
         </label>
 
         <input
           id="username"
           type="text"
           formControlName="username"
-          placeholder="ادخل اسم المستخدم"
+          [placeholder]="'ادخل اسم المستخدم' | t"
           autocomplete="username"
         />
 
@@ -27,21 +27,21 @@
           form.controls.username.invalid
         ) {
           <span class="validation-error">
-            اسم المستخدم مطلوب
+            {{ 'اسم المستخدم مطلوب' | t }}
           </span>
         }
       </div>
 
       <div class="form-group">
         <label for="password">
-          كلمة المرور
+          {{ 'كلمة المرور' | t }}
         </label>
 
         <input
           id="password"
           type="password"
           formControlName="password"
-          placeholder="ادخل كلمة المرور"
+          [placeholder]="'ادخل كلمة المرور' | t"
           autocomplete="current-password"
         />
 
@@ -50,14 +50,14 @@
           form.controls.password.invalid
         ) {
           <span class="validation-error">
-            كلمة المرور مطلوبة
+            {{ 'كلمة المرور مطلوبة' | t }}
           </span>
         }
       </div>
 
       @if (errorMessage) {
         <div class="api-error">
-          {{ errorMessage }}
+          {{ errorMessage | t }}
         </div>
       }
 
@@ -67,15 +67,15 @@
 
         @if (isSubmitting) {
           <span class="spinner" aria-hidden="true"></span>
-          جاري تسجيل الدخول...
+          {{ 'جاري تسجيل الدخول...' | t }}
         } @else {
-          تسجيل الدخول
+          {{ 'تسجيل الدخول' | t }}
         }
       </button>
     </form>
 
     <button class="text-button" type="button" (click)="goToForgotPassword()">
-      نسيت كلمة المرور؟
+      {{ 'نسيت كلمة المرور؟' | t }}
     </button>
 
     <p class="version">

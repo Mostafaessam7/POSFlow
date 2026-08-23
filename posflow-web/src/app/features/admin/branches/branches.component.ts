@@ -21,13 +21,15 @@ import { Roles } from '../../../core/auth/roles';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { BranchResponse } from './branch.models';
 import { BranchService } from './branch.service';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-branches',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    TranslatePipe
   ],
   templateUrl: './branches.component.html',
   styleUrl: './branches.component.scss'

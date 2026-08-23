@@ -20,6 +20,8 @@ import {
 import { ProductResponse } from '../../products/product.models';
 import { ProductService } from '../../products/product.service';
 import { OrderService } from '../order.service';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { TranslationService } from '../../../core/i18n/translation.service';
 
 import {
   CreateOrderRequest,
@@ -45,7 +47,8 @@ interface PaymentLine {
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule
+    FormsModule,
+    TranslatePipe
   ],
   templateUrl: './checkout.component.html',
   styleUrl: './checkout.component.scss'
@@ -64,6 +67,9 @@ export class CheckoutComponent
 
   private readonly cdr =
     inject(ChangeDetectorRef);
+
+  private readonly translationService =
+    inject(TranslationService);
 
   private readonly searchTerm$ = new Subject<void>();
 
@@ -240,7 +246,9 @@ export class CheckoutComponent
 
   addToCart(product: ProductResponse): void {
     if (product.trackStock && product.stockQuantity <= 0) {
-      this.errorMessage = `"${product.nameAr}" غير متاح في المخزون`;
+      this.errorMessage =
+        `"${product.nameAr}" ` +
+        this.translationService.t('غير متاح في المخزون');
       return;
     }
 
@@ -253,7 +261,10 @@ export class CheckoutComponent
         product.trackStock &&
         existing.quantity + 1 > product.stockQuantity
       ) {
-        this.errorMessage = `الكمية المتاحة من "${product.nameAr}" غير كافية`;
+        this.errorMessage =
+          this.translationService.t('الكمية المتاحة من') +
+          ` "${product.nameAr}" ` +
+          this.translationService.t('غير كافية');
         return;
       }
 

@@ -16,13 +16,15 @@ import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-forgot-password',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    TranslatePipe
   ],
   templateUrl: './forgot-password.component.html',
   styleUrl: './forgot-password.component.scss'

@@ -1,44 +1,44 @@
-<div class="pos-page" dir="rtl">
+<div class="pos-page">
   <header class="pos-header">
     <div>
-      <h1>نقطة البيع</h1>
-      <p>ابحث عن منتج أو دوس عليه من الكتالوج لإضافته للفاتورة</p>
+      <h1>{{ 'نقطة البيع' | t }}</h1>
+      <p>{{ 'ابحث عن منتج أو دوس عليه من الكتالوج لإضافته للفاتورة' | t }}</p>
     </div>
 
     <div class="header-actions">
       <button class="ghost-button" type="button" (click)="goToOpenShift()">
-        الوردية
+        {{ 'الوردية' | t }}
       </button>
 
       <button class="ghost-button" type="button" (click)="goToHistory()">
-        سجل الورديات
+        {{ 'سجل الورديات' | t }}
       </button>
     </div>
   </header>
 
   @if (errorMessage) {
     <div class="alert error">
-      {{ errorMessage }}
+      {{ errorMessage | t }}
     </div>
   }
 
   @if (lastReceipt) {
     <section class="receipt-card">
-      <h2>تمت عملية البيع بنجاح ✅</h2>
+      <h2>{{ 'تمت عملية البيع بنجاح ✅' | t }}</h2>
 
       <div class="detail">
-        <span>رقم الفاتورة</span>
+        <span>{{ 'رقم الفاتورة' | t }}</span>
         <strong>{{ lastReceipt.orderNumber }}</strong>
       </div>
 
       <div class="detail">
-        <span>الإجمالي</span>
+        <span>{{ 'الإجمالي' | t }}</span>
         <strong>{{ lastReceipt.totalAmount | number:'1.2-2' }}</strong>
       </div>
 
       @if (lastReceipt.changeDue > 0) {
         <div class="detail change">
-          <span>الباقي للعميل</span>
+          <span>{{ 'الباقي للعميل' | t }}</span>
           <strong>{{ lastReceipt.changeDue | number:'1.2-2' }}</strong>
         </div>
       }
@@ -49,11 +49,11 @@
         [disabled]="isDownloadingReceipt"
         (click)="downloadReceiptPdf()"
       >
-        {{ isDownloadingReceipt ? 'جارِ التحميل...' : 'تحميل الفاتورة PDF' }}
+        {{ (isDownloadingReceipt ? 'جارِ التحميل...' : 'تحميل الفاتورة PDF') | t }}
       </button>
 
       <button class="primary-button" type="button" (click)="startNewSale()">
-        فاتورة جديدة
+        {{ 'فاتورة جديدة' | t }}
       </button>
     </section>
   } @else {
@@ -62,15 +62,15 @@
         <input
           class="search-box"
           type="text"
-          placeholder="ابحث بالاسم أو الباركود..."
-          aria-label="بحث عن منتج"
+          [placeholder]="'ابحث بالاسم أو الباركود...' | t"
+          [attr.aria-label]="'بحث عن منتج' | t"
           [(ngModel)]="searchTerm"
           (ngModelChange)="onSearchChange()"
           (keydown.enter)="onSearchEnter($event)"
         />
 
         @if (isLoadingProducts) {
-          <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>تحميل المنتجات...</div>
+          <div class="message loading-message"><span class="spinner" aria-hidden="true"></span>{{ 'تحميل المنتجات...' | t }}</div>
         }
 
         @if (!isLoadingProducts) {
@@ -85,22 +85,22 @@
                 <span class="price">{{ product.price | number:'1.2-2' }}</span>
                 @if (product.trackStock) {
                   <span class="stock-badge">
-                    متاح: {{ product.stockQuantity }}
+                    {{ 'متاح' | t }}: {{ product.stockQuantity }}
                   </span>
                 }
               </button>
             } @empty {
-              <div class="message">لا توجد منتجات مطابقة</div>
+              <div class="message">{{ 'لا توجد منتجات مطابقة' | t }}</div>
             }
           </div>
         }
       </section>
 
       <section class="cart">
-        <h2>الفاتورة الحالية</h2>
+        <h2>{{ 'الفاتورة الحالية' | t }}</h2>
 
         @if (cart.length === 0) {
-          <div class="empty-cart">السلة فارغة، دوس على منتج للبدء</div>
+          <div class="empty-cart">{{ 'السلة فارغة، دوس على منتج للبدء' | t }}</div>
         }
 
         @if (cart.length > 0) {
@@ -115,12 +115,12 @@
                 <div class="line-qty">
                   <button
                     type="button"
-                    aria-label="تقليل الكمية"
+                    [attr.aria-label]="'تقليل الكمية' | t"
                     (click)="decrement(line)">−</button>
                   <span>{{ line.quantity }}</span>
                   <button
                     type="button"
-                    aria-label="زيادة الكمية"
+                    [attr.aria-label]="'زيادة الكمية' | t"
                     (click)="increment(line)">+</button>
                 </div>
 
@@ -131,7 +131,7 @@
                 <button
                   class="remove-line"
                   type="button"
-                  [attr.aria-label]="'حذف ' + line.nameAr + ' من السلة'"
+                  [attr.aria-label]="('حذف' | t) + ' ' + line.nameAr + ' ' + ('من السلة' | t)"
                   (click)="removeLine(line)">
                   ×
                 </button>
@@ -140,11 +140,11 @@
           </div>
 
           <button class="clear-cart" type="button" (click)="clearCart()">
-            إفراغ السلة
+            {{ 'إفراغ السلة' | t }}
           </button>
 
           <div class="total-row">
-            <span>الإجمالي</span>
+            <span>{{ 'الإجمالي' | t }}</span>
             <strong>{{ total | number:'1.2-2' }}</strong>
           </div>
 
@@ -157,7 +157,7 @@
                     type="button"
                     [class.active]="line.method === PaymentMethod.Cash"
                     (click)="setLineMethod(line, PaymentMethod.Cash)">
-                    نقدي
+                    {{ 'نقدي' | t }}
                   </button>
 
                   <button
@@ -165,14 +165,14 @@
                     type="button"
                     [class.active]="line.method === PaymentMethod.Card"
                     (click)="setLineMethod(line, PaymentMethod.Card)">
-                    بطاقة
+                    {{ 'بطاقة' | t }}
                   </button>
 
                   @if (paymentLines.length > 1) {
                     <button
                       class="remove-payment"
                       type="button"
-                      aria-label="حذف طريقة الدفع"
+                      [attr.aria-label]="'حذف طريقة الدفع' | t"
                       (click)="removePaymentLine(line)">
                       ×
                     </button>
@@ -186,11 +186,11 @@
                     step="0.01"
                     [(ngModel)]="line.amount"
                     [ngModelOptions]="{ standalone: true }"
-                    placeholder="المبلغ"
+                    [placeholder]="'المبلغ' | t"
                   />
 
                   <button type="button" (click)="fillRemaining(line)">
-                    = المتبقي
+                    = {{ 'المتبقي' | t }}
                   </button>
                 </div>
 
@@ -198,7 +198,7 @@
                   <input
                     class="reference-input"
                     type="text"
-                    placeholder="رقم مرجعي (اختياري)"
+                    [placeholder]="'رقم مرجعي (اختياري)' | t"
                     [(ngModel)]="line.referenceNumber"
                     [ngModelOptions]="{ standalone: true }"
                   />
@@ -208,19 +208,19 @@
           </div>
 
           <button class="add-payment" type="button" (click)="addPaymentLine()">
-            + إضافة طريقة دفع (تقسيم الفاتورة)
+            + {{ 'إضافة طريقة دفع (تقسيم الفاتورة)' | t }}
           </button>
 
           @if (remainingBalance > 0) {
             <div class="change-row remaining">
-              <span>المتبقي على الفاتورة</span>
+              <span>{{ 'المتبقي على الفاتورة' | t }}</span>
               <strong>{{ remainingBalance | number:'1.2-2' }}</strong>
             </div>
           }
 
           @if (changeDue > 0) {
             <div class="change-row">
-              <span>الباقي للعميل</span>
+              <span>{{ 'الباقي للعميل' | t }}</span>
               <strong>{{ changeDue | number:'1.2-2' }}</strong>
             </div>
           }
@@ -232,14 +232,14 @@
             (click)="checkout()">
             @if (isCheckingOut) {
               <span class="spinner" aria-hidden="true"></span>
-              جاري إتمام البيع...
+              {{ 'جاري إتمام البيع...' | t }}
             } @else {
-              إتمام البيع
+              {{ 'إتمام البيع' | t }}
             }
           </button>
 
           <p class="keyboard-hint">
-            أو دوس Enter لإتمام البيع
+            {{ 'أو دوس Enter لإتمام البيع' | t }}
           </p>
         }
       </section>
