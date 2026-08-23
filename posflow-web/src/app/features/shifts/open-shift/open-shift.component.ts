@@ -21,6 +21,7 @@ import { ShiftService } from '../shift.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { Roles } from '../../../core/auth/roles';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { LocalDatePipe } from '../../../core/i18n/local-date.pipe';
 
 @Component({
   selector: 'app-open-shift',
@@ -28,7 +29,8 @@ import { TranslatePipe } from '../../../core/i18n/translate.pipe';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    TranslatePipe
+    TranslatePipe,
+    LocalDatePipe
   ],
   templateUrl: './open-shift.component.html',
   styleUrl: './open-shift.component.scss'

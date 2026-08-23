@@ -128,7 +128,7 @@
         <div class="detail">
           <span>{{ 'وقت الفتح' | t }}</span>
           <strong>
-            {{ currentShift.openedAtUtc | date:'medium' }}
+            {{ currentShift.openedAtUtc | localDate }}
           </strong>
         </div>
       </div>

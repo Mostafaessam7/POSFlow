@@ -57,7 +57,7 @@
                 {{ (shift.status === 'Open' ? 'مفتوحة' : 'مغلقة') | t }}
               </span>
 
-              <strong>{{ shift.openedAtUtc | date:'medium' }}</strong>
+              <strong>{{ shift.openedAtUtc | localDate }}</strong>
 
               @if (showBranchWide && shift.cashierName) {
                 <span class="cashier-name">{{ shift.cashierName }}</span>
@@ -96,7 +96,7 @@
                   class="order-row"
                   [class.voided]="order.status === 'Cancelled'">
                   <span class="order-number">{{ order.orderNumber }}</span>
-                  <span>{{ order.createdAtUtc | date:'shortTime' }}</span>
+                  <span>{{ order.createdAtUtc | localDate:'shortTime' }}</span>
                   <span class="order-total">
                     {{ order.totalAmount | number:'1.2-2' }}
                   </span>

@@ -18,12 +18,13 @@ import { ShiftResponse } from '../shift.models';
 import { OrderService } from '../../pos/order.service';
 import { OrderResponse } from '../../pos/order.models';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { LocalDatePipe } from '../../../core/i18n/local-date.pipe';
 import { TranslationService } from '../../../core/i18n/translation.service';
 
 @Component({
   selector: 'app-history',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, LocalDatePipe],
   templateUrl: './history.component.html',
   styleUrl: './history.component.scss'
 })
