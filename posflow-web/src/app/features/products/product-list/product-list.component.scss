@@ -25,12 +25,12 @@
     font-size: 32px;
     font-weight: 900;
     letter-spacing: -0.5px;
-    color: var(--color-bg);
+    color: var(--color-on-ink);
   }
 
   p {
     margin: 6px 0 0;
-    color: rgba(247, 242, 233, 0.62);
+    color: var(--color-on-ink-muted);
   }
 }
 

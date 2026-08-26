@@ -35,6 +35,17 @@
   --color-border-strong: #d9cdb6;
   --color-ink-line: #201c16;
 
+  /* Fixed - NOT redefined under [data-theme='dark']. The diagonal
+     page-header band (--color-ink-line) is always dark in both
+     themes by design, so text sitting on it needs a color that's
+     always light regardless of which theme is active. Using
+     --color-bg here would be wrong: --color-bg itself flips dark in
+     dark mode, which is exactly what caused this to render at a
+     1.1:1 contrast ratio (WCAG minimum is 4.5:1) until this was
+     split out. */
+  --color-on-ink: #f7f2e9;
+  --color-on-ink-muted: rgba(247, 242, 233, 0.62);
+
   /* Brand - near-black ink instead of teal; the terracotta accent
      below is the only color that gets to stand out. */
   --color-primary: #201c16;
