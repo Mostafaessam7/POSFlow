@@ -1,10 +1,10 @@
 # PosFlow — Handover Document
 
-**Last updated:** 28 July 2026
+**Last updated:** 27 August 2026
 **Prepared by:** Claude (Anthropic), across an extended pairing session with the project owner.
 **GitHub:** https://github.com/Mostafaessam7/POSFlow
 
-This document is a historical record of what was built and why, as of the session that produced it. **It is not the current status doc** — a lot has changed since (git repo, tenant isolation as an EF Core global filter, 2FA, permissions, audit log, account lockout, and more). For the up-to-date picture of what's actually done vs. still missing, read [`ENTERPRISE-READINESS.md`](ENTERPRISE-READINESS.md) first, then come back here for the "why" behind the original build.
+This document is a historical record of what was built and why. **It is not the current status doc** — for the up-to-date picture of what's actually done vs. still missing, read [`ENTERPRISE-READINESS.md`](ENTERPRISE-READINESS.md) first, then come back here for the "why" behind the build. The project has a real git history now (`git log` on `main`, ~28 commits from 5 August to 26 August 2026) — the "delivered as numbered zip files" workflow described in §2 below was how the *original* prototype was built, before it became a normal git repo; it is kept here only as history.
 
 ---
 
@@ -37,103 +37,105 @@ Everything was delivered as a sequence of numbered zip files, each with its own 
 | 11 | `posflow-remaining-integration-tests.zip` | Integration tests for Categories/Branches/Reports/Shifts branch-history |
 | 12 | `posflow-forgot-password-ci-health.zip` | Health check endpoint, GitHub Actions CI, forgot/reset password flow |
 
-**If any of these zips have been lost**, they'll need to be regenerated — this document alone isn't sufficient to reconstruct the code, only to understand what exists and why.
+**If any of these zips have been lost**, they'll need to be regenerated — this document alone isn't sufficient to reconstruct the code, only to understand what exists and why. In practice this no longer matters: the code lives in git now, so the source of truth is `git log`/`git show`, not the zip archive.
 
 ---
 
-## 3. Current feature set
+## 3. Current feature set (verified against the actual code, 27 August 2026)
 
 ### Backend APIs (all under `/api/`)
 | Area | Endpoints | Notes |
 |---|---|---|
-| Auth | `login`, `refresh`, `logout`, `forgot-password`, `reset-password`, `me` | Rotating refresh tokens; forgot-password needs a real email provider wired in (see §6) |
-| Products | full CRUD + pagination + category filter | RowVersion optimistic concurrency enforced on update |
-| Categories | full CRUD | Delete blocked if products still reference it |
-| Orders | `checkout`, `by-shift/{id}`, `{id}` (get), `{id}/void` | Stock-aware, split payments, void restores stock |
+| Auth | `login`, `login/verify-2fa`, `2fa/setup`, `2fa/enable`, `2fa/disable`, `refresh`, `logout`, `forgot-password`, `reset-password`, `me` | Rotating refresh tokens; optional TOTP 2FA (RFC 6238); account lockout after 5 failed attempts (15 min) |
+| Products | full CRUD + pagination + category filter + `by-barcode/{barcode}` + `{id}/stock-movements` | RowVersion optimistic concurrency enforced on update; stock changes write an append-only `StockMovement` row |
+| Categories | full CRUD | Delete blocked if products still reference it; list is `IMemoryCache`d |
+| Customers | full CRUD | Optional link from an order; simple loyalty points (1 point per currency unit) |
+| Exchange rates | full CRUD + `/convert` | Manual, admin-maintained per-tenant rates — **display-only conversion, no external FX API** |
+| Orders | `checkout`, `by-shift/{id}`, `{id}` (get), `{id}/void`, `{id}/receipt-pdf` | Stock-aware, split payments, tenant tax rate applied, void restores stock; PDF receipt via QuestPDF |
 | Shifts | `open`, `{id}/close`, `current`, `history`, `branch-history` | `branch-history` is Admin/Manager only |
 | Users | full CRUD + `reset-password` | Admin only |
 | Branches | full CRUD | Admin only |
 | Reports | `daily-summary` | Admin/Manager only; today's sales, cash/card split, top products |
-| — | `/health` | Checks DB connectivity |
+| — | `/health`, `/health/live`, `/health/ready`, `/metrics` | `/metrics` is a Prometheus scrape endpoint (prometheus-net), unauthenticated by design — protect it at the network layer |
+
+Authorization is policy-based (a `Permissions` catalog + `PermissionAuthorizationHandler`), not raw `[Authorize(Roles=...)]` — but there are still only 3 roles (`Admin`/`Manager`/`Cashier`; see `Roles.cs`), each mapped to a fixed permission set. There is no per-user custom permission assignment yet.
 
 ### Frontend screens
-Login, Forgot/Reset Password, Open/Close Shift, POS Checkout, Product List, Shift History, Sales Dashboard, Users admin, Branches admin.
+Login, Forgot/Reset Password, Open Shift, POS Checkout (with barcode lookup and PDF receipt download), Product List, Shift History, Sales Dashboard, Users admin, Branches admin. The whole app supports an Arabic/English language toggle and a light/dark theme toggle (`core/i18n/`, `core/theme/`).
 
 ### Cross-cutting
-- Global exception handler (consistent error JSON shape, no more per-controller try/catch)
+- Global exception handler (consistent error JSON shape, no more per-controller try/catch), with translated (Arabic/English) error messages
 - FluentValidation on every request DTO, enforced by a global action filter
-- CORS (configurable allow-list)
+- CORS (configurable allow-list, fails closed if unset)
 - Pagination on every list endpoint (`page`/`pageSize` query params)
-- A cohesive visual design system (CSS custom properties, Tajawal + JetBrains Mono type, warm "receipt paper" palette)
+- Global + auth-specific rate limiting (120 req/min per user/IP; 5/min on auth endpoints)
+- Security headers: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, CSP and HSTS (outside Development)
+- Serilog structured logging (console + rolling daily JSON files) and Prometheus HTTP metrics
+- Automatic `AuditLog` entries for Order/Product/AppUser/Branch/Shift changes
+- A cohesive visual design system (CSS custom properties, Tajawal + JetBrains Mono type, warm "receipt paper" palette, dark-mode variants)
 
-### Tests
-- `tests/PosFlow.Application.Tests` — unit tests for Shift/Order/Product service logic and validators (EF Core InMemory)
-- `tests/PosFlow.Api.Tests` — integration tests hitting the real HTTP pipeline for every controller (WebApplicationFactory)
-- Frontend: guard tests, checkout cart/payment-math tests, and a fix to a previously-broken default Angular scaffold test
-- CI (`.github/workflows/ci.yml`) runs all of the above on every push/PR to `main`
+### Tests (verified by actually running them, 27 August 2026)
+- `tests/PosFlow.Application.Tests` — **41 tests**, unit tests for Shift/Order/Product service logic, validators, tenant isolation, and a SQLite-backed test for the order-number unique-index retry race (EF Core InMemory doesn't enforce unique indexes, so that path needed a real relational provider)
+- `tests/PosFlow.Api.Tests` — **32 tests**, integration tests hitting the real HTTP pipeline for every controller (WebApplicationFactory), including cross-tenant HTTP-level security tests
+- Frontend (`ng test`, Vitest) — **36 tests**: guards, checkout cart/payment-math logic
+- `posflow-web/e2e/` — **2 Playwright specs** (login, core POS sale flow) against a real backend + SQL Server; run in CI (`.github/workflows/e2e.yml`) against a real `mssql` service container
+- `tests/load/posflow-load-test.js` — a k6 load-test script (catalog browsing + a single-VU checkout scenario); not run as part of CI, meant to be run manually against a staging-like environment
+- CI (`.github/workflows/ci.yml`) runs backend build/test, frontend build/test, `dotnet list package --vulnerable`, `npm audit --audit-level=high`, and a Docker image build check on every push/PR to `main`; on push to `main` it also publishes both Docker images to GHCR (no deploy-to-a-server step yet)
 
----
-
-## 4. Setup checklist (do this first)
-
-None of this code has been compiled or run — it was all written without access to a .NET SDK or Node in this session. **Treat it as "should work" code that needs verification, not "known working" code.**
-
-1. Extract all 12 zips in order (§2), each into the location its `README.txt` specifies.
-2. Run the migrations mentioned in the READMEs for batches 6, 9 (`AddRefreshTokens`... actually check each batch — batches 5, 6, and 12 each add DB changes), in order:
-   - Batch 5: `RefreshTokens` table
-   - Batch 6: Product stock/category columns, Order void columns, `ProductCategories` table
-   - Batch 12: `AppUser.Email` column, `PasswordResetTokens` table
-   - Generate these as **one combined migration** if you haven't been applying them incrementally — don't need three separate migrations if you're starting fresh.
-3. `dotnet build` the solution and fix any compile errors (there's a real chance of small ones — namespace typos, a missed usage update after a signature change, etc. — see §7).
-4. `dotnet test` — get the test suite green.
-5. `npm install` in `posflow-web/`, then `ng build` — fix any compile errors there too.
-6. `ng test` — get the frontend suite green.
-7. Run both apps together and walk through one full manual flow yourself: login → open shift → sell something → close shift → check the dashboard.
+**Known dependency issue:** `dotnet list package --vulnerable --include-transitive` currently reports a **high-severity** advisory for the transitive package `SQLitePCLRaw.lib.e_sqlite3` 2.1.11 (pulled in by the test project's SQLite provider, used only for the order-number race test above) — see `GHSA-2m69-gcr7-jv3q`. The CI step reports this but does not fail the build on it (no `--audit-level`-style gate exists for `dotnet list package --vulnerable`), so this can slip through unnoticed. Worth bumping the SQLite package or gating CI on this explicitly.
 
 ---
 
-## 5. Known limitations (honest list, as of 28 July)
+## 4. Setup checklist (verified working as of 27 August 2026)
 
-These were explicitly identified and deliberately deferred, not overlooked. **Several of these have since been resolved** — see the inline "(resolved — ...)" notes below and [`ENTERPRISE-READINESS.md`](ENTERPRISE-READINESS.md) §0.1 for the current, verified state of each.
+Unlike earlier versions of this document, this has actually been built and tested directly in this session: `dotnet build`, `dotnet test` (73 tests), and `npm test` (36 tests) were all run against the real code and passed. Steps to run it yourself:
 
-- **Email is not actually sent.** `LoggingEmailSender` (the default `IEmailSender`) logs the reset link instead of emailing it. Replace the DI registration in `Program.cs` with a real provider (SendGrid, SES, SMTP/MailKit) before relying on forgot-password in production. *(resolved in code — `SmtpEmailSender` exists; still needs real SMTP credentials supplied by the project owner, which no assistant can do on their behalf.)*
-- **No receipt printing/PDF export** — the checkout success card is on-screen only. *(still open)*
-- **No barcode-scanner-optimized lookup endpoint** — a scanner that types a barcode + Enter would currently just filter the in-memory product list client-side, which is fine at small catalog sizes but not built for scale. *(still open)*
-- **No order-level discounts or tax configuration** — discounts are per-line only; tax is hardcoded to 0. *(resolved — `Tenant.TaxRatePercent` is now applied at checkout.)*
-- **No customer records** — every sale is anonymous. *(resolved — `Customer` CRUD + optional order linkage + simple loyalty points.)*
-- **Stock has no adjustment/audit trail** — `StockQuantity` is just a number editors can overwrite directly, no "received 50 units on X" history. *(still open — the general `AuditLog` now covers Product field changes including StockQuantity, but there's no dedicated stock-movement ledger.)*
-- **No E2E browser tests** (Playwright/Cypress) — all test coverage is unit + API-integration level, nothing clicks through the actual rendered UI. *(resolved — `posflow-web/e2e/` has Playwright specs for login and the core sale flow, run in CI against a real SQL Server service container.)*
-- **Order-number collision retry logic is untested** — hard to force a genuine unique-constraint race deterministically against EF Core's InMemory provider, so this path (real, but rare) has no automated test. *(still open)*
-- **No account lockout after repeated failed logins** — only IP-based rate limiting existed. *(resolved — 5 consecutive failures locks the account for 15 minutes, independent of the caller's IP; see `AuthService.LoginAsync`.)*
+1. `dotnet restore PosFlow.slnx && dotnet build PosFlow.slnx`
+2. `dotnet test PosFlow.slnx` — should be green (73 tests).
+3. `dotnet run --project src/PosFlow.Api/PosFlow.Api.csproj` — Development environment auto-migrates and seeds demo data by default.
+4. `cd posflow-web && npm install && npm test -- --watch=false` — should be green (36 tests).
+5. `ng serve --proxy-config src/proxy.conf.json`, then open `http://localhost:4200`.
+6. Optional: `docker compose up` runs API + Angular (behind nginx) + SQL Server together for local use.
+7. Optional: E2E — see `posflow-web/e2e/README.md` (needs a real SQL Server reachable, not just unit-test mocks).
+8. Walk through one full manual flow yourself: login → open shift → sell something (try the barcode field and the PDF receipt download) → close shift → check the dashboard.
+
+---
+
+## 5. Known limitations (honest list, as of 27 August 2026)
+
+Most of the gaps identified in earlier sessions have since been closed. This list reflects what is **still actually missing**, verified against the current code — see [`ENTERPRISE-READINESS.md`](ENTERPRISE-READINESS.md) for the full, categorized picture.
+
+- **Email works but needs real credentials.** `SmtpEmailSender` exists and is used automatically once `Smtp:Host` is configured; without it, `LoggingEmailSender` just logs the reset link. No assistant can supply real SMTP credentials on the project owner's behalf.
+- **Currency conversion is display-only.** `ExchangeRate` is a manual, admin-maintained per-tenant table with a `/convert` endpoint — there's no live FX API integration.
+- **Only 3 fixed roles.** The permission system is policy-based under the hood, but there's no UI or API to assign a *custom* permission set to an individual user — every user is still Admin, Manager, or Cashier.
+- **No CD to a real server.** CI publishes Docker images to GHCR on every push to `main`, but nothing pulls/deploys them anywhere — that needs a hosting decision (Azure/AWS/a VM/k8s) the project owner has to make.
+- **Backup is a script, not a schedule.** `deploy/backup-database.ps1` exists and works for self-hosted SQL Server, but nothing runs it automatically — it needs to be wired into Task Scheduler/cron on whatever server actually hosts the database.
+- **No staging/production `appsettings.*.json`** — only `appsettings.Development.json` exists; production config is expected to come entirely from environment variables/secrets manager, which is fine but undocumented as an explicit "staging" tier.
+- **Caching is partial and single-instance.** `IMemoryCache` covers product categories only (not products/stock, deliberately, to avoid stale-inventory bugs); it wouldn't work correctly if PosFlow ever ran as more than one instance — that would need Redis or similar.
+- **A known high-severity transitive vulnerability exists** in the test project's SQLite dependency (`SQLitePCLRaw.lib.e_sqlite3` 2.1.11, `GHSA-2m69-gcr7-jv3q`) — flagged by `dotnet list package --vulnerable` in CI but not currently blocking the build.
+- **No load testing beyond a manual k6 script** — `tests/load/posflow-load-test.js` exists but isn't run in CI and hasn't been run against anything resembling production infrastructure.
+- **No alerting** — `/metrics` exists for a self-hosted Prometheus/Grafana to scrape, but nothing is configured to page/notify anyone on an error spike or downtime.
 
 ---
 
 ## 6. Before going to production — must-do list
 
-1. **Real email provider** (§5) — forgot-password is non-functional without this.
-2. **Rotate secrets** — `Jwt:Key` and the DB connection string in `appsettings.json` are development placeholders. Use environment variables or a secrets manager in production; never commit real secrets.
-3. **Set `Cors:AllowedOrigins`** in production `appsettings.json` to your real frontend domain(s) — it ships empty on purpose (fails closed, not open).
-4. **Set `App:FrontendBaseUrl`** in production `appsettings.json` — used to build the reset-password link.
-5. **Point your host's health checks at `/health`.**
-6. Decide on a real backup/retention policy for the SQL Server database — not something this session touched at all.
+1. **Real SMTP credentials** (§5) — forgot-password logs a link instead of emailing it until `Smtp:Host` etc. are set.
+2. **Rotate secrets** — `Jwt:Key` and the DB connection string ship as development placeholders in `appsettings.json`. Use environment variables or a secrets manager (Azure Key Vault wiring already exists — set `KeyVault:Uri`) in production; never commit real secrets.
+3. **Set `Cors:AllowedOrigins`** in production config to your real frontend domain(s) — it ships empty on purpose (fails closed, not open).
+4. **Set `App:FrontendBaseUrl`** — used to build the reset-password link.
+5. **Point your host's health checks at `/health/live` and `/health/ready`** (separate liveness/readiness probes).
+6. **Run migrations as an explicit deploy step** (`App:AutoMigrateOnStartup` defaults to `false` outside Development) — see `deploy/README.md`.
+7. **Schedule the backup script** (or rely on your managed DB's automated backups) — see `deploy/README.md` §6.
+8. **Choose a hosting target and add a deploy job** that pulls the GHCR images onto it — CI currently stops at "images published to GHCR".
 
 ---
 
-## 7. If the build doesn't compile cleanly
+## 7. Suggested next steps, roughly in order
 
-This is the single most likely thing to go wrong, precisely because none of this was compiler-checked. If you hit errors:
-
-- Most likely causes: a `using` that should've been added wasn't, a DTO constructor's parameter order changed in a later batch and one call site elsewhere wasn't updated, or a namespace mismatch.
-- These are almost always quick, mechanical fixes once you can see the actual compiler error — paste it back into a conversation with Claude and it can be fixed in a turn or two, much faster than trying to debug it blind.
-- If you're using Claude Code or a similar coding agent locally, it can iterate against the real compiler directly, which will be faster than round-tripping through chat for this kind of cleanup.
-
----
-
-## 8. Suggested next steps, roughly in order
-
-1. Get it compiling and running (§4).
-2. Fix whatever the compiler/test run surfaces.
-3. Do one real manual walkthrough as a cashier, then as an admin.
-4. Wire up a real email provider if forgot-password matters to you.
-5. Deploy to a real environment and point `/health` at your monitoring.
-6. Only after it's live and being used for real — revisit §5 and decide which limitations actually matter for your shop, rather than guessing in the abstract.
+1. Decide on a hosting target (Azure/AWS/a VM/k8s) and add a real deploy step to CI.
+2. Wire up real SMTP credentials if forgot-password matters for your launch.
+3. Schedule the backup script (or confirm your managed DB's automatic backups meet your retention needs).
+4. Do one real manual walkthrough as a cashier, then as an admin, on the environment you're about to launch.
+5. Point `/health/ready` and `/metrics` at real monitoring/alerting.
+6. Only after it's live and being used for real — revisit §5 and decide which remaining limitations actually matter for your shop, rather than guessing in the abstract.
