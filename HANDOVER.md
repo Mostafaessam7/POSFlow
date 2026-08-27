@@ -80,9 +80,11 @@ Login, Forgot/Reset Password, Open Shift, POS Checkout (with barcode lookup and 
 - Frontend (`ng test`, Vitest) — **36 tests**: guards, checkout cart/payment-math logic
 - `posflow-web/e2e/` — **2 Playwright specs** (login, core POS sale flow) against a real backend + SQL Server; run in CI (`.github/workflows/e2e.yml`) against a real `mssql` service container
 - `tests/load/posflow-load-test.js` — a k6 load-test script (catalog browsing + a single-VU checkout scenario); not run as part of CI, meant to be run manually against a staging-like environment
-- CI (`.github/workflows/ci.yml`) runs backend build/test, frontend build/test, `dotnet list package --vulnerable`, `npm audit --audit-level=high`, and a Docker image build check on every push/PR to `main`; on push to `main` it also publishes both Docker images to GHCR (no deploy-to-a-server step yet)
+- CI (`.github/workflows/ci.yml`) runs backend build/test, frontend build/test, a NuGet vulnerability gate (fails on High/Critical), `npm audit --audit-level=high`, and a Docker image build check on every push/PR to `main`; on push to `main` it also publishes both Docker images to GHCR (no deploy-to-a-server step yet)
 
-**Known dependency issue:** `dotnet list package --vulnerable --include-transitive` currently reports a **high-severity** advisory for the transitive package `SQLitePCLRaw.lib.e_sqlite3` 2.1.11 (pulled in by the test project's SQLite provider, used only for the order-number race test above) — see `GHSA-2m69-gcr7-jv3q`. The CI step reports this but does not fail the build on it (no `--audit-level`-style gate exists for `dotnet list package --vulnerable`), so this can slip through unnoticed. Worth bumping the SQLite package or gating CI on this explicitly.
+**Resolved 28 Aug 2026:** the high-severity advisory for the transitive package `SQLitePCLRaw.lib.e_sqlite3` 2.1.11 (`GHSA-2m69-gcr7-jv3q`, pulled in by the test project's SQLite provider) is closed — pinned to 2.1.13 as a direct `PackageReference` in `PosFlow.Application.Tests.csproj`. `dotnet list package --vulnerable --include-transitive` now reports no vulnerable packages in any project.
+
+The CI step that reports this was also decorative until the same date: `dotnet list package --vulnerable` exits 0 even when it finds something, so the step could never fail the build. It now greps its own output and fails on High/Critical, mirroring the frontend's existing `npm audit --audit-level=high` gate. The gate was verified in both directions against real command output (clean → passes, the 2.1.11 finding → fails).
 
 ---
 

@@ -17,7 +17,7 @@
 | Logging | Serilog (console + JSON files + request logging) |
 | Monitoring | Prometheus metrics endpoint (`/metrics`) عبر `prometheus-net.AspNetCore` |
 | Tests | xUnit (backend, unit + integration) + Vitest (frontend) + Playwright (E2E) + k6 (load test) |
-| CI/CD | GitHub Actions — build, test, vulnerability scan, Docker build، ونشر الـ images على GHCR (مفيش نشر تلقائي لسيرفر فعلي بعد) |
+| CI/CD | GitHub Actions — build, test, vulnerability gate (بيوقف الـ build على High/Critical), Docker build، ونشر الـ images على GHCR (مفيش نشر تلقائي لسيرفر فعلي بعد) |
 
 ## هيكل المستودع
 
