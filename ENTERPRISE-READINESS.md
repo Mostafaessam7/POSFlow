@@ -71,7 +71,7 @@
 | **Rate limiting على `auth` بس** | باقي الـ endpoints (خصوصًا `checkout`) مفيهاش أي حماية من abuse أو حِمل مفاجئ. |
 | **مفيش queue/background jobs** | أي عملية طويلة (تقارير، إيميلات، مستقبلًا تصدير Excel) بتتنفذ synchronous جوه الـ request. مفيش Hangfire/Azure Functions/queue. |
 | **Barcode lookup** | ✅ (تحديث 27 أغسطس) — بقى فيه `GET /api/products/by-barcode/{barcode}` سيرفر-سايد (`ProductsController`)، مربوط في شاشة الـ POS بدل الفلترة على الفرونت إند. |
-| **مفيش Load testing** | ✅ جزئي (تحديث 27 أغسطس) — فيه سكريبت k6 (`tests/load/posflow-load-test.js`) بيغطي تصفح الكتالوج والـ checkout، لكن مش جزء من الـ CI ولا اتشغل على بيئة شبيهة بالإنتاج فعليًا. |
+| **مفيش Load testing** | ✅ جزئي (تحديث 27 أغسطس) — فيه سكريبت k6 (`tests/load/posflow-load-test.js`) بيغطي تصفح الكتالوج والـ checkout. مش جزء من الـ CI **عن قصد** (راجع بند 12 تحت)، ولسه محتاج يتشغل على بيئة شبيهة بالإنتاج فعليًا. |
 
 ---
 
@@ -88,11 +88,11 @@
 | موجود | ناقص |
 |---|---|
 | Unit tests (Application layer) — 41 اختبار | ✅ **E2E tests** (Playwright) موجودة دلوقتي (تحديث 27 أغسطس) — `posflow-web/e2e/` (login + سيناريو بيع)، لسه قليلة عن قصد (أهم مسارين بس) |
-| Integration tests (API, WebApplicationFactory) — 32 اختبار | ✅ جزئي **Load/performance tests** — سكريبت k6 موجود، مش جزء من CI |
+| Integration tests (API, WebApplicationFactory) — 32 اختبار | ✅ جزئي **Load/performance tests** — سكريبت k6 موجود، مش جزء من CI عن قصد (thresholds هتفلّت على runner مشترك) |
 | Frontend unit tests (guards, checkout logic) — 36 اختبار | ✅ **Security tests** موجودة (تحديث 27 أغسطس) — `TenantIsolationTests` + اختبارات HTTP فعلية لمحاولة وصول tenant تاني عبر الـ API |
 | CI يشغّل الكل عند كل push (فعليًا شغال، الريبو مربوط بـ GitHub) | **Mutation testing** أو أي قياس فعلي لجودة الاختبارات (مش بس coverage %) — لسه ناقص |
 | | **Contract tests** بين الـ frontend والـ backend — لسه ناقص |
-| | ⚠️ فيه **ثغرة أمنية high-severity حالية** في حزمة SQLite الترانزيتيفية بمشروع الاختبارات (`SQLitePCLRaw.lib.e_sqlite3` 2.1.11, `GHSA-2m69-gcr7-jv3q`) — بتظهر في `dotnet list package --vulnerable` لكن مش بتوقف الـ CI |
+| | ✅ **(تحديث 28 أغسطس)** الثغرة الـ high-severity في `SQLitePCLRaw.lib.e_sqlite3` 2.1.11 (`GHSA-2m69-gcr7-jv3q`) اتقفلت — Pin على 2.1.13، و`dotnet list package --vulnerable` بقى نضيف في كل المشاريع. وخطوة الفحص في الـ CI بقت **بتوقف الـ build فعليًا** على High/Critical بدل ما تطبع بس |
 
 ---
 
@@ -135,7 +135,7 @@
 | إيميل حقيقي | ✅ (تقنيًا) | `SmtpEmailSender` جاهز، بس **لازم تحط بيانات SMTP حقيقية بنفسك** (API key فعلي) — مينفعش حد يعمل ده نيابة عنك |
 | Secrets في appsettings | ✅ (اتنضف) | `appsettings.json` بقى بدون قيم حقيقية + `.env.example` كامل |
 | Dockerfile / docker-compose | ✅ | API + Angular (nginx) + SQL Server، للتطوير المحلي أساسًا |
-| CI: vulnerability scanning | ✅ | `dotnet list package --vulnerable` + `npm audit` في الـ workflow |
+| CI: vulnerability scanning | ✅ | `dotnet list package --vulnerable` + `npm audit` في الـ workflow — **الاتنين بيوقفوا الـ build على High/Critical** (تحديث 28 أغسطس) |
 | CI: Docker build check | ✅ | build فقط (بدون push) للتأكد إن الـ Dockerfiles شغالة |
 | Health checks | ✅ | `/health/live` و `/health/ready` منفصلين دلوقتي |
 | Rate limiting على كل الـ API | ✅ | مش بس auth — فيه global limiter دلوقتي (120 طلب/دقيقة لكل مستخدم/IP) |
@@ -184,23 +184,25 @@
 1. **اختر استضافة فعلية وأضف خطوة deploy حقيقية** — الـ CI بينشر الـ Docker images على GHCR بس، مفيش حاجة بتاخدهم لسيرفر شغال.
 2. **جدول تشغيل سكريبت الـ backup** فعليًا (Task Scheduler/cron) لو هتستضيف SQL Server بنفسك، أو تأكد إن الـ backup الأوتوماتيكي شغال لو الداتابيز managed.
 3. **حط بيانات SMTP حقيقية** — `SmtpEmailSender` جاهز بس forgot-password هيفضل بيكتب اللينك في اللوج بس لحد ما يتحط `Smtp:Host` فعلي.
-4. **عالج الثغرة الأمنية الحالية** في `SQLitePCLRaw.lib.e_sqlite3` 2.1.11 (`GHSA-2m69-gcr7-jv3q`) — موجودة دلوقتي فعليًا في مشروع الاختبارات، والـ CI بيبلّغ عنها بس مش بيوقف الـ build بسببها.
+4. ~~**عالج الثغرة الأمنية الحالية** في `SQLitePCLRaw.lib.e_sqlite3` 2.1.11~~ — ✅ **اتعملت (28 أغسطس)**: Pin على 2.1.13، والـ CI بقى بيوقف الـ build فعليًا على أي High/Critical.
 
 ### مهم (خلال أول 1-2 شهر تشغيل)
 5. **Alerting فعلي** — `/metrics` موجود لكن مفيش حد بيتنبه فورًا لو حصل spike في الأخطاء أو الـ API وقعت.
 6. **Redis بدل IMemoryCache** لو النظام هيشتغل على أكتر من instance واحدة (الكاش الحالي على التصنيفات بس، وهيكون غلط لو multi-instance).
 7. **تفعيل Azure Key Vault فعليًا** (الكود جاهز، محتاج حساب Azure وتحديد `KeyVault:Uri`).
 8. **تحويل عملة حقيقي** لو هتحتاج ربط بسعر صرف فعلي بدل الإدخال اليدوي — الجدول موجود بس مفيش API خارجي مربوط.
-9. **`appsettings.Staging.json`** منفصل بوضوح لو محتاج بيئة staging مميزة عن production.
+9. ~~**`appsettings.Staging.json`** منفصل بوضوح~~ — ❌ **اتراجعت واتقرر إنها مش مطلوبة (28 أغسطس)**: كل تفريعات البيئة في `Program.cs` مبنية على `IsDevelopment()` وبس، يعني Staging بياخد سلوك الإنتاج الآمن تلقائيًا (Swagger مقفول، HSTS شغال) من غير أي ملف. والقيم الحقيقية أصلاً بتيجي من environment variables / secrets manager بالتصميم (`appsettings.json` بيفشل مقفول عن قصد). إضافة ملف Staging بقيم placeholder هتفتح مكان يتحط فيه secrets بالغلط وتناقض التصميم ده — لو احتجت بيئة staging، ظبّطها بنفس متغيرات البيئة بقيم مختلفة.
 
 ### تحسين (بعد الاستقرار)
 10. **نظام صلاحيات مخصص لكل مستخدم** — البنية التحتية (catalog + policy-based auth) جاهزة، لكن لسه 3 أدوار ثابتة بس، مفيش تخصيص فردي.
 11. **Mutation testing / Contract tests** بين الـ frontend والـ backend — لسه ناقص بالكامل.
-12. **تشغيل k6 load test فعليًا** على بيئة شبيهة بالإنتاج، مش لوكال بس.
+12. **تشغيل k6 load test فعليًا** على بيئة شبيهة بالإنتاج، مش لوكال بس. **اتراجعت (28 أغسطس): مقصود إنه مايتحطش في الـ CI** — الـ thresholds الحالية (`p95 < 800ms`) على GitHub runner مشترك ومزدحم هتفشل عشوائيًا وتدّي false failures، والرقم نفسه مش معبّر عن أي حاجة على هاردوير مشترك. مكانه الصح بيئة شبيهة بالإنتاج، مش كل PR.
 13. **APM حقيقي** (Application Insights أو Prometheus+Grafana مربوطين فعليًا، مش بس الـ endpoint موجود).
 
 ---
 
 ## ملاحظة أخيرة
 
-المشروع اتقدم بشكل ملموس من أول مراجعة في 5 أغسطس لحد 27 أغسطس — Clean Architecture، multi-tenant isolation بطبقتين، 2FA، permissions، audit log، PDF receipts، barcode lookup، stock ledger، i18n + dark mode، Prometheus metrics، وk6 load test، كلها موجودة وشغالة وبتعدي 73 اختبار backend + 36 frontend + E2E specs. الفجوة الحقيقية المتبقية مش في الكود نفسه، لكن في **قرارات تشغيلية محتاجة صاحب المشروع**: اختيار استضافة فعلية للـ CD، تفعيل الخدمات السحابية (Key Vault، SMTP حقيقي)، جدولة الـ backup، ومعالجة الثغرة الأمنية الحالية في تبعية SQLite بمشروع الاختبارات.
+المشروع اتقدم بشكل ملموس من أول مراجعة في 5 أغسطس لحد 27 أغسطس — Clean Architecture، multi-tenant isolation بطبقتين، 2FA، permissions، audit log، PDF receipts، barcode lookup، stock ledger، i18n + dark mode، Prometheus metrics، وk6 load test، كلها موجودة وشغالة وبتعدي 73 اختبار backend + 36 frontend + E2E specs. الفجوة الحقيقية المتبقية مش في الكود نفسه، لكن في **قرارات تشغيلية محتاجة صاحب المشروع**: اختيار استضافة فعلية للـ CD، تفعيل الخدمات السحابية (Key Vault، SMTP حقيقي)، وجدولة الـ backup.
+
+> **تحديث 28 أغسطس:** الثغرة الأمنية اللي كانت مذكورة هنا اتقفلت (Pin على `SQLitePCLRaw.lib.e_sqlite3` 2.1.13)، وخطوة فحص الثغرات في الـ CI بقت بتوقف الـ build فعليًا بدل ما تطبع بس. يعني كل البنود الباقية دلوقتي محتاجة قرار/حساب خارجي منك — مفيش حاجة قابلة للإصلاح من جوه الريبو نفسه فاضلة في القائمة العاجلة.

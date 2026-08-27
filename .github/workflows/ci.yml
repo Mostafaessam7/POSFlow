@@ -30,7 +30,18 @@ jobs:
         run: dotnet test PosFlow.slnx --no-build --configuration Release --verbosity normal
 
       - name: Check for known-vulnerable NuGet packages
-        run: dotnet list PosFlow.slnx package --vulnerable --include-transitive
+        # `dotnet list package --vulnerable` exits 0 even when it finds
+        # something, so the output has to be inspected to actually gate the
+        # build - otherwise this step is decorative. Mirrors the frontend's
+        # `npm audit --audit-level=high` below: fails on High/Critical only,
+        # so a low/moderate transitive advisory doesn't block every PR.
+        run: |
+          dotnet list PosFlow.slnx package --vulnerable --include-transitive 2>&1 | tee vuln.txt
+          if grep -qE '\s(High|Critical)\s' vuln.txt; then
+            echo "::error::High or Critical severity NuGet vulnerability found (see the table above)."
+            exit 1
+          fi
+          echo "No High/Critical NuGet vulnerabilities found."
 
   frontend:
     name: Frontend (build + test)
