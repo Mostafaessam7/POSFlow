@@ -15,8 +15,9 @@
 | Database | SQL Server + Entity Framework Core |
 | Auth | JWT قصير العمر + Refresh Tokens متجددة + 2FA اختياري (TOTP) |
 | Logging | Serilog (console + JSON files + request logging) |
-| Tests | xUnit (backend, unit + integration) + Vitest (frontend) + Playwright (E2E) |
-| CI/CD | GitHub Actions — build, test, vulnerability scan, Docker build، ونشر الـ images على GHCR |
+| Monitoring | Prometheus metrics endpoint (`/metrics`) عبر `prometheus-net.AspNetCore` |
+| Tests | xUnit (backend, unit + integration) + Vitest (frontend) + Playwright (E2E) + k6 (load test) |
+| CI/CD | GitHub Actions — build, test, vulnerability scan, Docker build، ونشر الـ images على GHCR (مفيش نشر تلقائي لسيرفر فعلي بعد) |
 
 ## هيكل المستودع
 
@@ -42,10 +43,11 @@ PosFlow/
 
 ## الحالة الحالية (باختصار)
 
-- **الكود بيتبني وبيعدي الاختبارات فعليًا** — تم التحقق مباشرة: `dotnet build` نظيف، **66 اختبار backend** (`dotnet test`) و**36 اختبار frontend** (`ng test`) كلهم ناجحين.
-- المميزات الأساسية شغالة end-to-end: تسجيل الدخول (+2FA اختياري)، الورديات، المنتجات والتصنيفات، طلبات البيع مع دفع مقسّم، الفويد/الاسترداد، لوحة تحكم المبيعات، إدارة المستخدمين والفروع والعملاء، نظام صلاحيات (Permissions) مرن، تدقيق (Audit Log) تلقائي على العمليات الحساسة، ضريبة وعملة قابلة للتعديل لكل Tenant.
+- **الكود بيتبني وبيعدي الاختبارات فعليًا** — تم التحقق مباشرة (27 أغسطس 2026): `dotnet build` نظيف، **73 اختبار backend** (41 unit + 32 integration، `dotnet test`) و**36 اختبار frontend** (`ng test`) كلهم ناجحين. فيه أيضًا 2 Playwright E2E specs و k6 load-test script (`tests/load/`).
+- المميزات الأساسية شغالة end-to-end: تسجيل الدخول (+2FA اختياري TOTP)، الورديات، المنتجات والتصنيفات، طلبات البيع مع دفع مقسّم، الفويد/الاسترداد، طباعة فاتورة PDF (QuestPDF)، بحث بالباركود (server-side)، سجل حركة مخزون (Stock Movements)، لوحة تحكم المبيعات، إدارة المستخدمين والفروع والعملاء، نظام صلاحيات (Permissions) مرن، تدقيق (Audit Log) تلقائي على العمليات الحساسة، ضريبة قابلة للتعديل وعملة عرض (تحويل يدوي بأسعار يحددها الأدمن، مفيش ربط بـ API خارجي)، واجهة عربية/إنجليزية قابلة للتبديل + وضع ليلي (Dark Mode).
 - عزل الـ Tenant محمي بطبقتين مستقلتين (فلتر يدوي + EF Core Global Query Filter)، مع اختبارات `TenantIsolationTests` تثبت إن الحماية شغالة حتى لو نسي أي service الفلتر اليدوي.
 - **قفل الحساب بعد محاولات دخول فاشلة متكررة** (5 محاولات → قفل 15 دقيقة) — بالإضافة لـ rate limiting بالـ IP، دفاع ضد محاولات موزعة على حساب معين.
+- مراقبة أساسية: Serilog (structured logging) + Prometheus `/metrics` — بدون Grafana/alerting جاهزين فعليًا، ده متروك لمن يستضيف النظام.
 - التفاصيل الكاملة لكل ميزة، ولكل ما زال ناقصًا وليه: [`HANDOVER.md`](HANDOVER.md) (السجل التاريخي) و[`ENTERPRISE-READINESS.md`](ENTERPRISE-READINESS.md) (تقييم الجاهزية المحدّث).
 
 ## التشغيل محليًا
