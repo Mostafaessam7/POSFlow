@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authorization;
 using PosFlow.Api.Authorization;
+using PosFlow.Api.Configuration;
 using PosFlow.Api.Filters;
 using PosFlow.Api.HealthChecks;
 using PosFlow.Api.Middleware;
@@ -201,6 +202,14 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IAuthService,
     AuthService>();
+
+// Runs before the JWT key is used for anything. Outside Development this rejects the checked-in
+// placeholder secrets, which the length check below cannot catch on its own - the shipped default
+// key is 60 characters and passes it happily. See SecretsValidator for why matching is
+// pattern-based rather than a list of known values.
+SecretsValidator.EnsureProductionSecretsAreConfigured(
+    builder.Configuration,
+    builder.Environment);
 
 var jwtOptions = builder.Configuration
     .GetSection(JwtOptions.SectionName)
