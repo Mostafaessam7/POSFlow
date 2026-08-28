@@ -423,6 +423,14 @@ app.UseSerilogRequestLogging();
 
 app.UseExceptionHandler();
 
+// Gives a ProblemDetails body to responses that would otherwise be a bare status code - the 401,
+// 403 and 404 the framework generates itself. Without this a caller receives an empty body and has
+// only the number to work from, unable to distinguish an expired token from a wrong route.
+//
+// Validation errors (400) already return full ProblemDetails from ASP.NET Core, and unhandled
+// exceptions are covered by the handler above; this closes the remaining gap between them.
+app.UseStatusCodePages();
+
 app.Use(async (context, next) =>
 {
     context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
