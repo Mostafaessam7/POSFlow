@@ -139,7 +139,32 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
+
+    // Adds api/v1/... beside the existing api/... - see VersionedRouteConvention
+    options.Conventions.Add(new VersionedRouteConvention());
 });
+
+// API versioning is free to add while there are no external clients, and a breaking change
+// requiring a migration window once there are.
+builder.Services
+    .AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+
+        // Unversioned routes are treated as v1, so the existing Angular client keeps working
+        // untouched.
+        options.AssumeDefaultVersionWhenUnspecified = true;
+
+        // Advertises api-supported-versions on responses, so a client can discover what exists
+        // without out-of-band documentation.
+        options.ReportApiVersions = true;
+    })
+    .AddMvc()
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    });
 
 builder.Services.AddValidatorsFromAssemblyContaining<
     OpenShiftRequestValidator>();
