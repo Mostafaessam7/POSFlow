@@ -1,3 +1,15 @@
+/* Shared Mecodex design system. tokens.css carries everything theme-independent
+   and no colour; the theme file supplies the palette. PosFlow is assigned
+   Enterprise Blue.
+
+   Deliberately NOT adopted from the shared system: this product's zero border
+   radius and its Tajawal type stack. Both are considered product decisions
+   rather than drift - the squared-off treatment is the core of the editorial
+   look described below, and Tajawal is carrying the Arabic UI, which Inter
+   would render noticeably worse. Colour is what the theme decision covered. */
+@import './design-system/tokens.css';
+@import './design-system/themes/enterprise-blue.css';
+
 /*
   PosFlow design tokens - "الإصدار المحرر" (Open Kitchen Editorial).
   Palette idea: a bold print magazine, not a soft SaaS dashboard - warm
@@ -20,19 +32,19 @@
 
 :root {
   /* Surfaces */
-  --color-bg: #f7f2e9;
-  --color-surface: #ffffff;
-  --color-surface-sunken: #efe6d4;
+  --color-bg: var(--mx-surface-base);
+  --color-surface: var(--mx-surface);
+  --color-surface-sunken: var(--mx-surface-sunk);
 
   /* Text */
-  --color-ink: #201c16;
-  --color-muted: #6b6255;
-  --color-muted-light: #a89e8e;
+  --color-ink: var(--mx-text);
+  --color-muted: var(--mx-text-secondary);
+  --color-muted-light: var(--mx-text-muted);
 
   /* Borders - thin rule lines carry structure now that cards have no
      shadow, so border-strong is a real dark line, not a faint tint. */
-  --color-border: #ece2d0;
-  --color-border-strong: #d9cdb6;
+  --color-border: var(--mx-border);
+  --color-border-strong: var(--mx-border-strong);
   --color-ink-line: #201c16;
 
   /* Fixed - NOT redefined under [data-theme='dark']. The diagonal
@@ -43,24 +55,24 @@
      dark mode, which is exactly what caused this to render at a
      1.1:1 contrast ratio (WCAG minimum is 4.5:1) until this was
      split out. */
-  --color-on-ink: #f7f2e9;
+  --color-on-ink: var(--mx-text-on-accent);
   --color-on-ink-muted: rgba(247, 242, 233, 0.62);
 
   /* Brand - near-black ink instead of teal; the terracotta accent
      below is the only color that gets to stand out. */
-  --color-primary: #201c16;
-  --color-primary-dark: #000000;
-  --color-primary-soft: #ece2d0;
+  --color-primary: var(--mx-accent);
+  --color-primary-dark: var(--mx-accent-hover);
+  --color-primary-soft: var(--mx-accent-subtle);
 
   /* Accent (money / highlights / the one signature color) */
-  --color-accent: #b9481e;
-  --color-accent-soft: #f4ded0;
+  --color-accent: var(--mx-accent-alt);
+  --color-accent-soft: var(--mx-accent-alt-subtle);
 
   /* Status */
-  --color-danger: #a6371c;
-  --color-danger-soft: #f6ded0;
-  --color-success: #4f6b3f;
-  --color-success-soft: #e4ead9;
+  --color-danger: var(--mx-danger);
+  --color-danger-soft: var(--mx-danger-subtle);
+  --color-success: var(--mx-success);
+  --color-success-soft: var(--mx-success-subtle);
 
   /* Type */
   --font-ui: 'Tajawal', 'Segoe UI', sans-serif;
@@ -88,29 +100,29 @@
    still pops on a dark surface. ThemeService stamps data-theme on
    <html> before first paint (see app.ts), so there's no flash. */
 :root[data-theme='dark'] {
-  --color-bg: #1c1810;
-  --color-surface: #262019;
-  --color-surface-sunken: #14110c;
+  --color-bg: var(--mx-surface-base);
+  --color-surface: var(--mx-surface);
+  --color-surface-sunken: var(--mx-surface-sunk);
 
-  --color-ink: #f5efe4;
-  --color-muted: #a89e8e;
-  --color-muted-light: #756c5f;
+  --color-ink: var(--mx-text);
+  --color-muted: var(--mx-text-secondary);
+  --color-muted-light: var(--mx-text-muted);
 
-  --color-border: #3a342a;
-  --color-border-strong: #4d4536;
+  --color-border: var(--mx-border);
+  --color-border-strong: var(--mx-border-strong);
   --color-ink-line: #0d0b07;
 
-  --color-primary: #f5efe4;
-  --color-primary-dark: #ffffff;
-  --color-primary-soft: #3a342a;
+  --color-primary: var(--mx-accent);
+  --color-primary-dark: var(--mx-accent-hover);
+  --color-primary-soft: var(--mx-accent-subtle);
 
-  --color-accent: #dd8551;
-  --color-accent-soft: #3a2a1c;
+  --color-accent: var(--mx-accent-alt);
+  --color-accent-soft: var(--mx-accent-alt-subtle);
 
-  --color-danger: #e0765a;
-  --color-danger-soft: #3a2019;
-  --color-success: #86a86a;
-  --color-success-soft: #263019;
+  --color-danger: var(--mx-danger);
+  --color-danger-soft: var(--mx-danger-subtle);
+  --color-success: var(--mx-success);
+  --color-success-soft: var(--mx-success-subtle);
 
   --shadow-card-lg: 0 2px 14px rgba(0, 0, 0, 0.5);
 }
