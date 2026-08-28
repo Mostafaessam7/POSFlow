@@ -54,10 +54,15 @@ export const authInterceptor:
     catchError((error: HttpErrorResponse) => {
       const isAuthEndpoint = request.url.includes('/api/auth/');
 
+      // The refresh token now lives in an HttpOnly cookie, so the client cannot check whether one
+      // exists before trying — that is the intended trade. Instead of gating on a readable token,
+      // attempt the refresh and treat its failure as "no session", which the catchError below
+      // already handles by logging out. Gating on getAccessToken() keeps the common case cheap: a
+      // 401 with no access token at all is an unauthenticated request, not an expired one.
       if (
         error.status !== 401 ||
         isAuthEndpoint ||
-        !authService.getRefreshToken()
+        !authService.getAccessToken()
       ) {
         if (error.status === 401) {
           authService.logout();

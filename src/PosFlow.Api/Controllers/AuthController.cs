@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using PosFlow.Api.Auth;
 using PosFlow.Application.Auth;
 
 namespace PosFlow.Api.Controllers;
@@ -16,10 +17,72 @@ namespace PosFlow.Api.Controllers;
 [ApiController]
 [Route("api/auth")]
 public sealed class AuthController(
-    IAuthService authService)
+    IAuthService authService,
+    IWebHostEnvironment environment)
     : ControllerBase
 {
     private readonly IAuthService _authService = authService;
+    private readonly IWebHostEnvironment _environment = environment;
+
+    /// <summary>
+    /// For a cookie-transport caller, moves the refresh token out of the JSON body and into an
+    /// HttpOnly cookie. Returning it in both places would defeat the entire point — the token would
+    /// still be readable by any script on the page.
+    /// </summary>
+    private ActionResult<LoginResponse> RespondWithSession(LoginResponse result)
+    {
+        if (!WebAuthCookies.UsesCookieTransport(Request) || string.IsNullOrEmpty(result.RefreshToken))
+        {
+            return Ok(result);
+        }
+
+        WebAuthCookies.Issue(
+            Response,
+            result.RefreshToken,
+            // Refresh-token lifetime is owned by the auth service; the cookie is set to expire with
+            // the access token's day boundary at the latest so a stale cookie is not left behind.
+            result.ExpiresAtUtc?.AddDays(30) ?? DateTime.UtcNow.AddDays(30),
+            _environment.IsDevelopment());
+
+        return Ok(result with { RefreshToken = null });
+    }
+
+    /// <summary>
+    /// Resolves which refresh token to act on. A cookie-carried token is only honoured when the
+    /// double-submit CSRF check passes — the browser attaches the cookie automatically, so without
+    /// this a third-party page could trigger a refresh or logout on the user's behalf.
+    /// </summary>
+    /// <remarks>
+    /// The "a refresh token must be present" rule lives here rather than in a FluentValidation
+    /// validator on <see cref="RefreshTokenRequest"/>. Validation runs before the action, and a
+    /// validator in the Application layer cannot see cookies — it would have to reference
+    /// ASP.NET Core, which is exactly the dependency Clean Architecture keeps out of that project.
+    /// Since which transport carries the credential is an API-layer concern, the presence check
+    /// belongs here, where both sources are visible.
+    /// </remarks>
+    private (string? Token, ActionResult? Failure) ResolveRefreshToken(RefreshTokenRequest request)
+    {
+        var cookieToken = Request.Cookies[WebAuthCookies.RefreshTokenCookieName];
+
+        if (!string.IsNullOrEmpty(cookieToken))
+        {
+            // The browser attaches this cookie automatically, so without the double-submit check a
+            // third-party page could trigger a refresh or logout on the user's behalf.
+            if (!WebAuthCookies.HasValidCsrfToken(Request))
+            {
+                return (null, BadRequest(new { message = "طلب غير صالح: تحقق CSRF فشل." }));
+            }
+
+            return (cookieToken, null);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return (null, BadRequest(new { message = "رمز التجديد مطلوب." }));
+        }
+
+        return (request.RefreshToken, null);
+    }
 
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
@@ -40,7 +103,7 @@ public sealed class AuthController(
             });
         }
 
-        return Ok(result);
+        return RespondWithSession(result);
     }
 
     [AllowAnonymous]
@@ -62,7 +125,7 @@ public sealed class AuthController(
             });
         }
 
-        return Ok(result);
+        return RespondWithSession(result);
     }
 
     [Authorize]
@@ -131,19 +194,32 @@ public sealed class AuthController(
         RefreshTokenRequest request,
         CancellationToken cancellationToken)
     {
+        var (token, failure) = ResolveRefreshToken(request);
+        if (failure is not null)
+        {
+            return failure;
+        }
+
         var result = await _authService.RefreshAsync(
-            request,
+            request with { RefreshToken = token ?? string.Empty },
             cancellationToken);
 
         if (result is null)
         {
+            // The cookie is cleared on a rejected refresh so an expired or revoked token does not
+            // sit in the browser causing every subsequent request to retry and fail.
+            if (WebAuthCookies.UsesCookieTransport(Request))
+            {
+                WebAuthCookies.Clear(Response, _environment.IsDevelopment());
+            }
+
             return Unauthorized(new
             {
                 message = "جلسة الدخول منتهية، الرجاء تسجيل الدخول مرة أخرى"
             });
         }
 
-        return Ok(result);
+        return RespondWithSession(result);
     }
 
     [AllowAnonymous]
@@ -153,9 +229,22 @@ public sealed class AuthController(
         RefreshTokenRequest request,
         CancellationToken cancellationToken)
     {
+        var (token, failure) = ResolveRefreshToken(request);
+        if (failure is not null)
+        {
+            return failure;
+        }
+
         await _authService.RevokeAsync(
-            request,
+            request with { RefreshToken = token ?? string.Empty },
             cancellationToken);
+
+        // Cleared unconditionally for cookie callers: even if the server-side revoke failed, the
+        // browser must stop holding a credential the user has asked to give up.
+        if (WebAuthCookies.UsesCookieTransport(Request))
+        {
+            WebAuthCookies.Clear(Response, _environment.IsDevelopment());
+        }
 
         return NoContent();
     }
