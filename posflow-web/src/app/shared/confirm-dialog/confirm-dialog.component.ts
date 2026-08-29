@@ -4,15 +4,17 @@ import { FormsModule } from '@angular/forms';
 
 import { ConfirmDialogService } from './confirm-dialog.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { DialogBehaviorDirective } from '../dialog-behavior.directive';
 
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, DialogBehaviorDirective],
   template: `
     @if (service.pending(); as pending) {
-      <div class="overlay" (keydown.escape)="service.respondCancel()">
-        <div class="dialog" role="alertdialog" aria-modal="true" [attr.aria-label]="pending.request.title | t">
+      <div class="overlay">
+        <div class="dialog" role="alertdialog" aria-modal="true" [attr.aria-label]="pending.request.title | t"
+             appDialogBehavior (dismissed)="service.respondCancel()">
           <h2>{{ pending.request.title | t }}</h2>
           <p>{{ pending.request.message | t }}</p>
 
