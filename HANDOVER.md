@@ -74,11 +74,12 @@ Login, Forgot/Reset Password, Open Shift, POS Checkout (with barcode lookup and 
 - Automatic `AuditLog` entries for Order/Product/AppUser/Branch/Shift changes
 - A cohesive visual design system (CSS custom properties, Tajawal + JetBrains Mono type, warm "receipt paper" palette, dark-mode variants)
 
-### Tests (verified by actually running them, 27 August 2026)
+### Tests (verified by actually running them, 29 August 2026)
 - `tests/PosFlow.Application.Tests` — **41 tests**, unit tests for Shift/Order/Product service logic, validators, tenant isolation, and a SQLite-backed test for the order-number unique-index retry race (EF Core InMemory doesn't enforce unique indexes, so that path needed a real relational provider)
-- `tests/PosFlow.Api.Tests` — **32 tests**, integration tests hitting the real HTTP pipeline for every controller (WebApplicationFactory), including cross-tenant HTTP-level security tests
-- Frontend (`ng test`, Vitest) — **36 tests**: guards, checkout cart/payment-math logic
-- `posflow-web/e2e/` — **2 Playwright specs** (login, core POS sale flow) against a real backend + SQL Server; run in CI (`.github/workflows/e2e.yml`) against a real `mssql` service container
+- `tests/PosFlow.Api.Tests` — **62 tests**, integration tests hitting the real HTTP pipeline for every controller (WebApplicationFactory), including cross-tenant HTTP-level security tests, the HttpOnly-cookie auth transport, and the auth rate-limit policy split
+- Frontend (`ng test`, Vitest) — **40 tests**: guards, checkout cart/payment-math logic
+- `posflow-web/e2e/` — **3 Playwright spec files, 4 tests** (login ×2, core POS sale flow, confirm-dialog keyboard behaviour) against a real backend + SQL Server; run in CI (`.github/workflows/e2e.yml`) against a real `mssql` service container
+  - The dialog spec has to be E2E rather than a unit test: jsdom performs no layout, so every element reports zero geometry, the CDK's focus-trap logic finds nothing tabbable, and focus assertions fail for reasons that exist only in jsdom
 - `tests/load/posflow-load-test.js` — a k6 load-test script (catalog browsing + a single-VU checkout scenario); not run as part of CI, meant to be run manually against a staging-like environment
 - CI (`.github/workflows/ci.yml`) runs backend build/test, frontend build/test, a NuGet vulnerability gate (fails on High/Critical), `npm audit --audit-level=high`, and a Docker image build check on every push/PR to `main`; on push to `main` it also publishes both Docker images to GHCR (no deploy-to-a-server step yet)
 
@@ -90,13 +91,13 @@ The CI step that reports this was also decorative until the same date: `dotnet l
 
 ## 4. Setup checklist (verified working as of 27 August 2026)
 
-Unlike earlier versions of this document, this has actually been built and tested directly in this session: `dotnet build`, `dotnet test` (73 tests), and `npm test` (36 tests) were all run against the real code and passed. Steps to run it yourself:
+Unlike earlier versions of this document, this has actually been built and tested directly: `dotnet build`, `dotnet test` (103 tests), and `npm test` (40 tests) were all run against the real code and passed. Steps to run it yourself:
 
 1. `dotnet restore PosFlow.slnx && dotnet build PosFlow.slnx`
-2. `dotnet test PosFlow.slnx` — should be green (73 tests).
-3. `dotnet run --project src/PosFlow.Api/PosFlow.Api.csproj` — Development environment auto-migrates and seeds demo data by default.
-4. `cd posflow-web && npm install && npm test -- --watch=false` — should be green (36 tests).
-5. `ng serve --proxy-config src/proxy.conf.json`, then open `http://localhost:4200`.
+2. `dotnet test PosFlow.slnx` — should be green (103 tests: 62 API + 41 Application).
+3. `dotnet run --project src/PosFlow.Api/PosFlow.Api.csproj` — serves `http://localhost:5000`. Development environment auto-migrates and seeds demo data by default.
+4. `cd posflow-web && npm install && npm test -- --watch=false` — should be green (40 tests).
+5. `npm start`, then open `http://localhost:4200`. The proxy is wired in `angular.json`; do not pass `--proxy-config` by hand.
 6. Optional: `docker compose up` runs API + Angular (behind nginx) + SQL Server together for local use.
 7. Optional: E2E — see `posflow-web/e2e/README.md` (needs a real SQL Server reachable, not just unit-test mocks).
 8. Walk through one full manual flow yourself: login → open shift → sell something (try the barcode field and the PDF receipt download) → close shift → check the dashboard.

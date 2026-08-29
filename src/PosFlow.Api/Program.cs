@@ -191,6 +191,13 @@ builder.Services
         // Advertises api-supported-versions on responses, so a client can discover what exists
         // without out-of-band documentation.
         options.ReportApiVersions = true;
+
+        // The version is read from the route itself (api/v1/...), which is what
+        // VersionedRouteConvention generates. Without this the package falls back to its default
+        // QueryStringApiVersionReader: that happens to work, but only because
+        // AssumeDefaultVersionWhenUnspecified covers every request lacking ?api-version. It also
+        // raises AV0015 and leaves the configuration describing a versioning scheme we do not use.
+        options.ApiVersionReader = new Asp.Versioning.UrlSegmentApiVersionReader();
     })
     .AddMvc()
     .AddApiExplorer(options =>
