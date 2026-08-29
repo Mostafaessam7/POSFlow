@@ -92,6 +92,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 const string AuthRateLimitPolicy = "auth";
+const string SessionRateLimitPolicy = "auth-session";
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -107,6 +108,38 @@ builder.Services.AddRateLimiter(options =>
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    // Refresh and logout sat on the 5/min policy above until a browser test
+    // measured what that does to ordinary use: log in, then reload the page
+    // four times, and the fourth reload returns 429. restoreSession() treats a
+    // failed refresh as "no session" and signs the user out. Reloading a page
+    // four times in a minute is not abuse.
+    //
+    // It is worse than it looks for this product specifically. The limit is
+    // keyed per IP, and a shop's terminals share one public address, so several
+    // cashiers reloading spend each other's budget and sign each other out.
+    //
+    // Neither endpoint is the brute-force surface the policy above exists for.
+    // Refresh is authenticated by a high-entropy, single-use, rotating token in
+    // an HttpOnly cookie -- 5/min is not what makes guessing it infeasible. And
+    // throttling logout is its own hazard: a user on a shared terminal who
+    // cannot sign out is an exposure, not a protected resource.
+    //
+    // Login, 2FA verification and the password-reset endpoints keep the strict
+    // limit, which is where the comment above actually applies: those take a
+    // guessable secret (a password, a six-digit code, a reset token).
+    options.AddPolicy(SessionRateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                // Far above any human reload rate, and still a ceiling on a
+                // runaway client that retries refresh in a loop.
+                PermitLimit = 60,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));

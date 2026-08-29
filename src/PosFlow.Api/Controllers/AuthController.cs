@@ -8,7 +8,10 @@ namespace PosFlow.Api.Controllers;
 
 // The strict 5/min "auth" limiter is applied per-action below, only to
 // endpoints an anonymous attacker could hammer to brute-force a
-// credential (login, 2FA verification, password reset, refresh). The
+// credential: login, 2FA verification, and password reset. Refresh and
+// logout moved to the looser "auth-session" policy - neither takes a
+// guessable secret, and refresh runs on every page load, so the strict
+// limit was signing users out after a few reloads (see Program.cs). The
 // authenticated 2FA management endpoints (setup/enable/disable) are
 // already gated by [Authorize] and covered by the global rate limiter
 // instead - a legitimate logged-in user completing 2FA setup can
@@ -188,7 +191,9 @@ public sealed class AuthController(
     }
 
     [AllowAnonymous]
-    [EnableRateLimiting("auth")]
+    // "auth-session", not "auth": this runs on every page load, so the strict
+    // brute-force limit signed users out after a few reloads. See Program.cs.
+    [EnableRateLimiting("auth-session")]
     [HttpPost("refresh")]
     public async Task<ActionResult<LoginResponse>> Refresh(
         RefreshTokenRequest request,
@@ -223,7 +228,9 @@ public sealed class AuthController(
     }
 
     [AllowAnonymous]
-    [EnableRateLimiting("auth")]
+    // "auth-session": a user who cannot sign out is an exposure, not something
+    // worth throttling. See Program.cs.
+    [EnableRateLimiting("auth-session")]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(
         RefreshTokenRequest request,
