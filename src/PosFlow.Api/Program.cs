@@ -342,6 +342,33 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 
+// Distributed cache. Redis when ConnectionStrings:Redis is set, otherwise an in-memory
+// implementation of the same IDistributedCache interface.
+//
+// The fallback is deliberate rather than lazy. Requiring Redis unconditionally would mean local
+// development, CI and the whole test suite all need a Redis server running to do anything - so the
+// realistic outcome is that someone disables the cache instead. This way the code path is identical
+// everywhere and only the backing store changes.
+//
+// The fallback is NOT equivalent in a scaled deployment, and that is the point of configuring
+// Redis: with the in-memory store, a write on one instance does not invalidate another instance's
+// copy, so a category edit can stay invisible on other instances until the entry expires.
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+
+if (!string.IsNullOrWhiteSpace(redisConnectionString))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnectionString;
+        // Keyspace prefix, so several apps can share one Redis instance without colliding.
+        options.InstanceName = "posflow:";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+
 builder.Services.AddScoped<
     ICurrentUser,
     CurrentUserService>();
