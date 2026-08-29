@@ -1,5 +1,25 @@
 # PosFlow — تقييم الجاهزية لمستوى Enterprise
 
+> # ⚠️ الملف ده لقطة تاريخية، مش حالة المشروع الحالية
+>
+> التقييم ده اتعمل في **5 أغسطس 2026** واتحدّث جزئيًا في **27 أغسطس**. الجداول في الأقسام 1-8
+> بتوصف الوضع وقت المراجعة الأولى، وأغلبها **بقى غلط دلوقتي**. أمثلة على بنود مكتوب عنها
+> "مفيش" وهي موجودة فعلًا في الكود النهارده:
+>
+> | مكتوب في الجداول | الواقع (اتفحص 2026-08-29) |
+> |---|---|
+> | مفيش Git repo | الريبو شغال وعليه remote |
+> | مفيش Dockerfile / docker-compose | `docker-compose.yml` + `posflow-web/Dockerfile` + `src/PosFlow.Api/Dockerfile` |
+> | مفيش 2FA/MFA | موجود (TOTP) — `TwoFactorChallenge`, `EnableTwoFactorRequest` |
+> | مفيش Audit Log | موجود — `Domain/Entities/AuditLog.cs` + migration |
+> | عزل Tenant يدوي | بقى طبقتين: فلتر يدوي + `HasQueryFilter` في `PosFlowDbContext` |
+> | الأسرار في appsettings.json | `SecretsValidator` بيمنع الإقلاع بره Development بالمفتاح المتسجّل |
+> | ناقص CSP و HSTS | الاتنين موجودين |
+> | auto-migrate على الإقلاع | اتشال — راجع `docs/adr/0002-explicit-migrations-not-auto-on-boot.md` |
+>
+> **للحالة الحالية اقرا [`PROJECT-STATUS.md`](PROJECT-STATUS.md).** الملف ده متساب كسجل للمراجعة
+> الأصلية بس — مفيد تعرف منه المشروع كان فين، مش هو فين دلوقتي.
+
 **تاريخ المراجعة:** 5 أغسطس 2026، **آخر تحديث: 27 أغسطس 2026** (مراجعة كاملة للكود الفعلي بعد أكتر من 20 commit إضافي منذ آخر مراجعة — راجع `git log` على `main`)
 **بناءً على:** فحص فعلي للكود في `src/`, `posflow-web/`, `tests/`, `.github/` (وليس فقط على `HANDOVER.md`) + تشغيل فعلي لـ `dotnet build`/`dotnet test`/`npm test`
 **GitHub:** https://github.com/Mostafaessam7/POSFlow
@@ -203,6 +223,9 @@
 
 ## ملاحظة أخيرة
 
-المشروع اتقدم بشكل ملموس من أول مراجعة في 5 أغسطس لحد 27 أغسطس — Clean Architecture، multi-tenant isolation بطبقتين، 2FA، permissions، audit log، PDF receipts، barcode lookup، stock ledger، i18n + dark mode، Prometheus metrics، وk6 load test، كلها موجودة وشغالة وبتعدي 73 اختبار backend + 36 frontend + E2E specs. الفجوة الحقيقية المتبقية مش في الكود نفسه، لكن في **قرارات تشغيلية محتاجة صاحب المشروع**: اختيار استضافة فعلية للـ CD، تفعيل الخدمات السحابية (Key Vault، SMTP حقيقي)، وجدولة الـ backup.
+المشروع اتقدم بشكل ملموس من أول مراجعة في 5 أغسطس لحد 27 أغسطس — Clean Architecture، multi-tenant isolation بطبقتين، 2FA، permissions، audit log، PDF receipts، barcode lookup، stock ledger، i18n + dark mode، Prometheus metrics، وk6 load test، كلها موجودة وشغالة وبتعدي **103 اختبار backend + 40 frontend + 4 E2E**. الفجوة الحقيقية المتبقية مش في الكود نفسه، لكن في **قرارات تشغيلية محتاجة صاحب المشروع**: اختيار استضافة فعلية للـ CD، تفعيل الخدمات السحابية (Key Vault، SMTP حقيقي)، وجدولة الـ backup.
+
+> **الحالة الحالية**: الملف ده سجل مراجعة بتواريخه. لحالة المشروع المحدّثة (اللي اتقفل، القرارات
+> المعتمدة، المفتوح، الـ technical debt) راجع [PROJECT-STATUS.md](PROJECT-STATUS.md).
 
 > **تحديث 28 أغسطس:** الثغرة الأمنية اللي كانت مذكورة هنا اتقفلت (Pin على `SQLitePCLRaw.lib.e_sqlite3` 2.1.13)، وخطوة فحص الثغرات في الـ CI بقت بتوقف الـ build فعليًا بدل ما تطبع بس. يعني كل البنود الباقية دلوقتي محتاجة قرار/حساب خارجي منك — مفيش حاجة قابلة للإصلاح من جوه الريبو نفسه فاضلة في القائمة العاجلة.

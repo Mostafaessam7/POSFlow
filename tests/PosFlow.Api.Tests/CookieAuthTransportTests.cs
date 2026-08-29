@@ -61,7 +61,7 @@ public sealed class CookieAuthTransportTests : IDisposable
             Assert.Fail("Login failed, so the assertions below never ran. Fix the seeded admin rather than letting this test pass silently.");
         }
 
-        Assert.Empty(SetCookies(response).Where(c => c.StartsWith("posflow_rt", StringComparison.Ordinal)));
+        Assert.DoesNotContain(SetCookies(response), c => c.StartsWith("posflow_rt", StringComparison.Ordinal));
     }
 
     [Fact]
