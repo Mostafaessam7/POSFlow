@@ -30,7 +30,7 @@ audit log، Serilog، health checks منفصلة (live/ready)، rate limiting ش
 | سكريبت الـ backup موجود بس **مش متجدول** | محتاج جدولة على السيرفر |
 | مفيش SMTP حقيقي متظبط | محتاج حساب |
 | مفيش alerting مربوط بالـ `/metrics` | محتاج إعداد خارجي |
-| **مفيش Redis** — الكاش الحالي `IMemoryCache` per-process، غلط لو multi-instance | شغل كود، متفق عليه |
+| ~~مفيش Redis~~ **اتعمل (29 أغسطس)** — الكاش بقى `IDistributedCache`: Redis لو `ConnectionStrings:Redis` متظبط، وin-memory لو مش متظبط | اتقفل |
 | **مفيش Correlation ID** يربط طلب في الفرونت بلوج في الباك | شغل كود |
 | **مفيش queue / background jobs** | شغل كود |
 | مفيش Infrastructure as Code | شغل كود |
@@ -85,7 +85,7 @@ audit log، Serilog، health checks منفصلة (live/ready)، rate limiting ش
 
 | البند الأصلي | الحالة الفعلية (اتفحصت 29 أغسطس) |
 |---|---|
-| مفيش caching layer | **جزئيًا.** فيه `IMemoryCache` على التصنيفات (`CategoryService`). **مفيش Redis** — والكاش الحالي per-process، يعني غلط لو النظام اشتغل على أكتر من instance. Redis متفق عليه للمنتج ده ولسه متعملش |
+| مفيش caching layer | **اتحل (29 أغسطس).** `CategoryService` بقى على `IDistributedCache` بدل `IMemoryCache`. الـ backing store بيبقى **Redis** لو `ConnectionStrings:Redis` متظبط، وin-memory لو مش متظبط — عشان التطوير المحلي والـ CI والاختبارات ميحتاجوش Redis شغال. الفرق الحقيقي إن الـ invalidation بقى بيوصل لكل الـ instances: قبل كده تعديل تصنيف على instance كان بيسيب الباقي بيقدّم نسخة قديمة لحد ما الـ entry يخلص |
 | Rate limiting على `auth` بس | **غلط دلوقتي.** فيه `GlobalLimiter` على كل الطلبات + سياسات خاصة بالـ auth. و`refresh`/`logout` اتشالوا من حد الـ brute-force لأنهم كانوا بيتقفلوا مع الاستخدام العادي |
 | Barcode lookup على الفرونت | **اتحل.** `GET /api/products/by-barcode/{barcode}` سيرفر-سايد |
 | **مفيش queue / background jobs** | **لسه صح.** مفيش Hangfire ولا أي hosted service — أي عملية طويلة لسه synchronous جوه الـ request |
@@ -203,7 +203,13 @@ Filters + اختبار مخصص. **ده بالظبط اللي اتعمل**: ال
 
 ### مهم (خلال أول 1-2 شهر تشغيل)
 5. **Alerting فعلي** — `/metrics` موجود لكن مفيش حد بيتنبه فورًا لو حصل spike في الأخطاء أو الـ API وقعت.
-6. **Redis بدل IMemoryCache** لو النظام هيشتغل على أكتر من instance واحدة (الكاش الحالي على التصنيفات بس، وهيكون غلط لو multi-instance).
+6. ~~**Redis بدل IMemoryCache**~~ — ✅ **اتعمل (29 أغسطس)**: `CategoryService` بقى على
+   `IDistributedCache`، ورا Redis لو `ConnectionStrings:Redis` متظبط، وin-memory لو مش متظبط.
+   الـ fallback مقصود عشان التطوير المحلي والـ CI والاختبارات ميحتاجوش Redis شغال — نفس مسار
+   الكود في كل مكان، اللي بيتغير هو التخزين ورا بس. **باقي عليك**: تظبط
+   `ConnectionStrings:Redis` على سيرفر حقيقي قبل ما تشغّل أكتر من instance. مغطى باختبار
+   بيتأكد إن تعديل التصنيفات بيبطّل الكاش فعلًا (`Listing_after_a_create_reflects_it...`) —
+   الاختبار ده اتجرّب إنه بيفشل لما الـ invalidation تتشال.
 7. **تفعيل Azure Key Vault فعليًا** (الكود جاهز، محتاج حساب Azure وتحديد `KeyVault:Uri`).
 7أ. **Correlation ID** — لو حصل خطأ، مفيش دلوقتي أي مُعرّف موحّد يربط الطلب في الفرونت باللوج في
    الباك. Serilog مركّب، فده إضافة صغيرة (middleware + enricher) بعائد كبير وقت التشخيص.

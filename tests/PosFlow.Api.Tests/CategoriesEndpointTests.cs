@@ -41,6 +41,39 @@ public sealed class CategoriesEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task Listing_after_a_create_reflects_it_even_though_the_list_was_already_cached()
+    {
+        // The category list is cached. This lists FIRST, so the cache is warm, and only then
+        // creates - which is what makes it a test of invalidation rather than of listing.
+        //
+        // CreateThenListCategories_AsAdmin_Succeeds below looks similar but cannot catch this: it
+        // creates before it ever lists, so nothing is cached at the point of the write and a
+        // completely broken invalidation would still let it pass.
+        //
+        // Worth having since the cache moved from IMemoryCache to IDistributedCache: the
+        // invalidation call changed shape (RemoveAsync, and it now has to be awaited), and getting
+        // it wrong would serve a stale category list with nothing failing anywhere.
+        await AuthenticateAsAdminAsync();
+
+        var warmUp = await _client.GetAsync("/api/categories");
+        Assert.Equal(HttpStatusCode.OK, warmUp.StatusCode);
+
+        var createResponse = await _client.PostAsJsonAsync(
+            "/api/categories",
+            new CreateCategoryRequest("مخبوزات", "Bakery"));
+
+        Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+
+        var listResponse = await _client.GetAsync("/api/categories");
+        var categories = await listResponse.Content
+            .ReadFromJsonAsync<List<CategoryResponse>>();
+
+        Assert.Contains(
+            categories!,
+            c => c.NameAr == "مخبوزات");
+    }
+
+    [Fact]
     public async Task CreateThenListCategories_AsAdmin_Succeeds()
     {
         await AuthenticateAsAdminAsync();
