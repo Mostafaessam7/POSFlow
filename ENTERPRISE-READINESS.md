@@ -1,146 +1,141 @@
 # PosFlow — تقييم الجاهزية لمستوى Enterprise
 
-> # ⚠️ الملف ده لقطة تاريخية، مش حالة المشروع الحالية
->
-> التقييم ده اتعمل في **5 أغسطس 2026** واتحدّث جزئيًا في **27 أغسطس**. الجداول في الأقسام 1-8
-> بتوصف الوضع وقت المراجعة الأولى، وأغلبها **بقى غلط دلوقتي**. أمثلة على بنود مكتوب عنها
-> "مفيش" وهي موجودة فعلًا في الكود النهارده:
->
-> | مكتوب في الجداول | الواقع (اتفحص 2026-08-29) |
-> |---|---|
-> | مفيش Git repo | الريبو شغال وعليه remote |
-> | مفيش Dockerfile / docker-compose | `docker-compose.yml` + `posflow-web/Dockerfile` + `src/PosFlow.Api/Dockerfile` |
-> | مفيش 2FA/MFA | موجود (TOTP) — `TwoFactorChallenge`, `EnableTwoFactorRequest` |
-> | مفيش Audit Log | موجود — `Domain/Entities/AuditLog.cs` + migration |
-> | عزل Tenant يدوي | بقى طبقتين: فلتر يدوي + `HasQueryFilter` في `PosFlowDbContext` |
-> | الأسرار في appsettings.json | `SecretsValidator` بيمنع الإقلاع بره Development بالمفتاح المتسجّل |
-> | ناقص CSP و HSTS | الاتنين موجودين |
-> | auto-migrate على الإقلاع | اتشال — راجع `docs/adr/0002-explicit-migrations-not-auto-on-boot.md` |
->
-> **للحالة الحالية اقرا [`PROJECT-STATUS.md`](PROJECT-STATUS.md).** الملف ده متساب كسجل للمراجعة
-> الأصلية بس — مفيد تعرف منه المشروع كان فين، مش هو فين دلوقتي.
+**آخر مراجعة كاملة: 29 أغسطس 2026.** الأقسام 1-8 اتراجعت بند بند على الكود الفعلي واتصحّحت في
+التاريخ ده — الجداول القديمة (من مراجعة 5 أغسطس) كانت بقت غلط في أغلبها واتشالت. تاريخ المراجعات
+الأصلية موجود في `git log` لو محتاجه.
 
-**تاريخ المراجعة:** 5 أغسطس 2026، **آخر تحديث: 27 أغسطس 2026** (مراجعة كاملة للكود الفعلي بعد أكتر من 20 commit إضافي منذ آخر مراجعة — راجع `git log` على `main`)
-**بناءً على:** فحص فعلي للكود في `src/`, `posflow-web/`, `tests/`, `.github/` (وليس فقط على `HANDOVER.md`) + تشغيل فعلي لـ `dotnet build`/`dotnet test`/`npm test`
+**بناءً على:** فحص فعلي للملفات (`grep`/`ls` على الكود نفسه، مش على `HANDOVER.md`) + تشغيل فعلي
+لـ `dotnet build` / `dotnet test` / `ng test`.
 **GitHub:** https://github.com/Mostafaessam7/POSFlow
 
-> **تحديث 27 أغسطس:** الجداول تحت (أقسام 1-8) بتوثّق الصورة زي ما كانت وقت المراجعة الأولى في 5 أغسطس، وفيها بنود بقت قديمة (اتحلت لاحقًا) — علّمنا كل بند اتحل بـ "✅ (تحديث 27 أغسطس)" جنبه. **قسم §0.1 تحت هو مصدر الحقيقة للحالة الحالية**، وبعده §0.2 بيغطي إضافات مرحلة أغسطس التانية (بعد 14 أغسطس) اللي معملهاش عليها إشارة في الجداول الأصلية خالص: طباعة PDF، بحث بالباركود من السيرفر، سجل حركة مخزون، تحويل عملة يدوي، Prometheus metrics، اختبار حمل k6، ودعم لغتين + وضع ليلي في الفرونت إند.
-
-هذا الملف يكمّل `HANDOVER.md` — ذاك يشرح "إيه اللي اتعمل"، وده يشرح **"إيه الناقص عشان نعتبره enterprise-grade"**، مرتب حسب الأولوية.
-
----
-
-## 0. الخلاصة السريعة
-
-المشروع بنيته الأساسية كويسة فعلاً (Clean Architecture، multi-tenant من الأول، FluentValidation، rate limiting، health checks، global exception handler). لكنه لسه **prototype قوي**، مش enterprise بعد. أكبر فجوة متبقية:
-
-- **الريبو لسه مش متربط بـ remote في كل بيئة عمل.** الكود موجود على GitHub فعليًا (https://github.com/Mostafaessam7/POSFlow)، لكن لو لقيت `git status` بيقول "not a git repository" في نسخة معينة من المجلد، معناه إنها نسخة محلية لسه محتاجة `git init` + ربط الـ remote — راجع تعليمات الإعداد في `README.md`. من غير ده الـ CI في `.github/workflows/ci.yml` مش هيشتغل فعليًا لأنه محتاج push حقيقي على GitHub.
-
-**الفجوة الحرجة التانية كانت عزل الـ Tenant اليدوي — دي **اتحلت** فعليًا (تحويلها لـ EF Core Global Query Filter + اختبار تلقائي)، شوف تفصيلها في §0.1 و§5 تحت.**
+الملف ده بيكمّل `HANDOVER.md`: ذاك بيشرح "إيه اللي اتعمل"، وده بيشرح **"إيه الناقص عشان نعتبره
+enterprise-grade"**. للحالة العامة المختصرة (القرارات، المفتوح، الـ technical debt) شوف
+[`PROJECT-STATUS.md`](PROJECT-STATUS.md).
 
 ---
 
-## 1. أمن (Security) — أولوية قصوى
+## 0. الخلاصة السريعة (29 أغسطس 2026)
 
-| المشكلة | التفاصيل | الحل المقترح |
-|---|---|---|
-| **عزل Tenant يدوي** | مفيش EF Core `HasQueryFilter` global filter على `TenantId` في `PosFlowDbContext.cs`. كل service بيفلتر يدوي. | ضيف `modelBuilder.Entity<T>().HasQueryFilter(e => e.TenantId == _currentTenantId)` على كل entity فيها TenantId، عشان تبقى طبقة حماية إضافية تلقائية مش معتمدة على تذكّر المبرمج. |
-| **auto-migrate على الإقلاع** | `Program.cs` بينادي `DatabaseSeeder.SeedAsync` اللي بيعمل `Database.MigrateAsync()` **في كل مرة يشتغل فيها الـ app**، بما فيها production. | في enterprise، الـ migrations لازم تتشغل كخطوة منفصلة في الـ deployment pipeline (`dotnet ef database update` أو migration bundle)، مش أوتوماتيك عند كل boot — عشان تتجنب race conditions لو شغال أكتر من instance، ولازم يكون فيه مراجعة/موافقة قبل أي schema change في production. |
-| **الأسرار في appsettings.json** | `Jwt:Key` قيمة افتراضية ثابتة في الملف (`PosFlow-Development-Key-Change-Me-2026...`)، والـ connection string كمان. | لازم Azure Key Vault / AWS Secrets Manager / environment variables، وممنوع أي سر حقيقي يتحط في ملف بيتراجع في git. |
-| **مفيش secrets scanning / dependency scanning** | الـ CI الحالي بيعمل build + test بس. | ضيف `dotnet list package --vulnerable`, `npm audit`, وأداة زي Gitleaks/Trivy/Dependabot. |
-| **مفيش account lockout بعد محاولات فاشلة** | ✅ اتحل — `AppUser.FailedLoginAttempts`/`LockoutEndUtc`، 5 محاولات فاشلة متتالية = قفل 15 دقيقة، بغض النظر عن الـ IP (دفاع ضد محاولات موزعة على حساب معين، بالإضافة لـ rate limiting بالـ IP الموجود أصلاً). مغطى باختبارات `AuthServiceLockoutTests`. | تنبيه إيميل للمستخدم عند القفل لسه مش موجود — تحسين مستقبلي بسيط. |
-| **مفيش 2FA/MFA** | مفيش أي طبقة تحقق ثانية، حتى للـ Admin. | مهم جدًا لأي نظام بيتعامل مع مبيعات وفلوس فعلية، الأقل للـ Admin role. |
-| **Refresh tokens** | موجودة، بس لازم تتأكد إن فيه rotation + revocation list (خصوصًا لو جهاز اتسرق). | راجع `AuthService.cs` تتأكد إن كل refresh بيلغي التوكن القديم فعليًا مش بس بيصدر جديد. |
-| **مفيش Audit Log** | مفيش جدول يسجل "مين عمل إيه وإمتى" (تعديل سعر، حذف منتج، void لأوردر، تغيير صلاحيات مستخدم). | أساسي لأي نظام مالي/enterprise لأسباب قانونية ومحاسبية. |
-| **CORS** | مضبوط صح (fails closed) — نقطة إيجابية، سيبها زي ما هي. |  |
-| **Security headers** | موجودة أساسيات (`X-Content-Type-Options`, `X-Frame-Options`, HTTPS redirect) — كويس، بس ناقص `Content-Security-Policy` و `Strict-Transport-Security` (HSTS). |  |
+البنية الأساسية قوية وشغالة: Clean Architecture، عزل tenant بطبقتين، 2FA، permissions،
+audit log، Serilog، health checks منفصلة (live/ready)، rate limiting شامل، فواتير PDF، سجل
+حركة مخزون، Prometheus metrics، وكوكي HttpOnly للـ refresh token مع حماية CSRF. الاختبارات:
+**41 unit + 62 integration + 40 frontend + 4 E2E**، و`dotnet build` بـ **0 warnings**.
 
----
+كل البنود اللي كانت "حرِجة" في أول مراجعة **اتقفلت**. الفجوات الحقيقية المتبقية معظمها
+**قرارات تشغيلية محتاجة حساب أو استضافة**، مش شغل كود:
 
-## 2. DevOps والبنية التحتية
-
-| المشكلة | التفاصيل |
+| الفجوة | النوع |
 |---|---|
-| **مفيش Git repo** | أهم حاجة قبل أي حاجة تانية. من غيره: مفيش branching, مفيش PR review, الـ CI في `.github/workflows` ميت (محتاج GitHub فعلي). |
-| **مفيش Dockerfile / docker-compose** | مفيش أي تعريف container لا للـ API ولا للـ Angular app ولا لـ SQL Server. يعني تشغيل المشروع محلي بس، ومفيش طريقة موحدة للنشر. |
-| **مفيش Infrastructure as Code** | مفيش Terraform/Bicep/ARM — كل حاجة "هتتظبط يدوي" على السيرفر. |
-| **CI بدون CD** | فيه build+test بس، مفيش أي خطوة نشر (deploy) حتى لبيئة staging. |
-| **مفيش environments متعددة واضحة** | فيه `appsettings.Development.json` بس، مفيش `appsettings.Staging.json` / `Production.json` منفصلين بوضوح. |
-| **مفيش خطة نسخ احتياطي (backup)** | مذكور صراحة في `HANDOVER.md` §6 إنها "لسه متعمولاش" — حرفيًا صفر backup strategy لقاعدة بيانات فيها مبيعات فعلية. |
-| **مفيش .env / secrets management عملي** | لا يوجد ملف `.env.example` ولا توثيق لمتغيرات البيئة المطلوبة فعليًا للنشر. |
+| مفيش CD لسيرفر حقيقي (الـ CI بيوصل لـ GHCR وبس) | محتاج قرار استضافة |
+| سكريبت الـ backup موجود بس **مش متجدول** | محتاج جدولة على السيرفر |
+| مفيش SMTP حقيقي متظبط | محتاج حساب |
+| مفيش alerting مربوط بالـ `/metrics` | محتاج إعداد خارجي |
+| **مفيش Redis** — الكاش الحالي `IMemoryCache` per-process، غلط لو multi-instance | شغل كود، متفق عليه |
+| **مفيش Correlation ID** يربط طلب في الفرونت بلوج في الباك | شغل كود |
+| **مفيش queue / background jobs** | شغل كود |
+| مفيش Infrastructure as Code | شغل كود |
 
 ---
+## 1-8. التقييم الأصلي — **اتراجع بالكامل واتصحّح (29 أغسطس 2026)**
 
-## 3. المراقبة والـ Observability
+الجداول الأصلية للأقسام 1-8 كانت من مراجعة **5 أغسطس**، وأغلبها بقى غلط. اتشالت واتبدلت
+بالجدول ده: كل بند اتفحص في الكود الفعلي، والحالة اللي مكتوبة هنا هي اللي اتأكدت منها.
 
-| المشكلة | التفاصيل |
+**الطريقة**: كل سطر اتأكد بـ `grep`/`ls` على الملفات نفسها أو بتشغيل الأمر، مش من الذاكرة ولا
+من `HANDOVER.md`.
+
+### أمن (Security)
+
+| البند الأصلي | الحالة الفعلية (اتفحصت 29 أغسطس) |
 |---|---|
-| **مفيش structured logging** | لا يوجد Serilog/NLog، الاعتماد على الـ default `ILogger` بدون sinks حقيقية (زي Seq/ELK/Application Insights). صعب تتبع مشكلة في production من غير كده. |
-| **مفيش Correlation ID / Request tracing** | لو حصل خطأ، مفيش ID موحد تتبعه بين الـ request في الـ frontend والـ log في الـ backend. |
-| **مفيش metrics / APM** | ✅ (تحديث 27 أغسطس) — فيه دلوقتي `/metrics` (Prometheus text format عبر `prometheus-net.AspNetCore`)، جاهز لأي Prometheus/Grafana ذاتي الاستضافة. مفيش لسه Application Insights أو أي APM SaaS، ومفيش alerting مربوط بيه فعليًا. |
-| **`/health` بسيط** | بيتأكد بس إن الداتابيز شغالة — كويس كبداية بس محتاج تفصيل أكتر (readiness vs liveness) في بيئة container/k8s. |
-| **مفيش alerting** | حتى لو حصل exception غير متوقع أو الـ API وقعت، مفيش حد هيتنبه فورًا. |
+| عزل Tenant يدوي بس | **اتحل.** طبقتين: فلتر يدوي + `HasQueryFilter` في `PosFlowDbContext`، ومغطى بـ `TenantIsolationTests`. التفصيل في [`docs/adr/0001`](docs/adr/0001-dual-layer-tenant-isolation.md) |
+| auto-migrate على الإقلاع | **اتشال.** Migrations بقت خطوة صريحة — [`docs/adr/0002`](docs/adr/0002-explicit-migrations-not-auto-on-boot.md) |
+| الأسرار في `appsettings.json` | **اتحل.** `SecretsValidator` بيمنع الإقلاع بره Development بالمفتاح المتسجّل في الريبو |
+| مفيش secrets/dependency scanning | **اتحل.** الـ CI بيوقف الـ build فعليًا على High/Critical (بيقرا مخرجات الأمر، مش الـ exit code — `dotnet list package --vulnerable` بيرجع 0 حتى لو لقى حاجة). + Dependabot |
+| مفيش account lockout | **اتحل.** 5 محاولات فاشلة = قفل 15 دقيقة، مستقل عن الـ IP |
+| مفيش 2FA/MFA | **اتحل.** TOTP اختياري — `TwoFactorChallenge` |
+| Refresh tokens محتاجة rotation/revocation | **اتحل**، وزيادة: التوكن بقى في **كوكي HttpOnly** مع حماية CSRF (`CookieAuthTransportTests`). النقل إضافي — العملاء اللي مش متصفحات لسه شغالين زي ما هما |
+| مفيش Audit Log | **اتحل.** `Domain/Entities/AuditLog.cs` + migration |
+| CORS مضبوط صح | **لسه صح**، وبقى فيه `AllowCredentials()` — لازم للكوكي. من غيره المتصفح بيرفض كل رد فيه كوكي **قبل** ما التطبيق يشوفه، والدخول بيفشل من غير أي خطأ من السيرفر |
+| ناقص CSP و HSTS | **اتحل.** الاتنين موجودين |
 
----
+### DevOps والبنية التحتية
 
-## 4. التوسع والأداء (Scalability & Performance)
-
-| المشكلة | التفاصيل |
+| البند الأصلي | الحالة الفعلية (اتفحصت 29 أغسطس) |
 |---|---|
-| **مفيش caching layer** | مفيش Redis/in-memory cache لأي حاجة (مثلاً قائمة المنتجات اللي بتتقرا كتير في نفس الشيفت). |
-| **Rate limiting على `auth` بس** | باقي الـ endpoints (خصوصًا `checkout`) مفيهاش أي حماية من abuse أو حِمل مفاجئ. |
-| **مفيش queue/background jobs** | أي عملية طويلة (تقارير، إيميلات، مستقبلًا تصدير Excel) بتتنفذ synchronous جوه الـ request. مفيش Hangfire/Azure Functions/queue. |
-| **Barcode lookup** | ✅ (تحديث 27 أغسطس) — بقى فيه `GET /api/products/by-barcode/{barcode}` سيرفر-سايد (`ProductsController`)، مربوط في شاشة الـ POS بدل الفلترة على الفرونت إند. |
-| **مفيش Load testing** | ✅ جزئي (تحديث 27 أغسطس) — فيه سكريبت k6 (`tests/load/posflow-load-test.js`) بيغطي تصفح الكتالوج والـ checkout. مش جزء من الـ CI **عن قصد** (راجع بند 12 تحت)، ولسه محتاج يتشغل على بيئة شبيهة بالإنتاج فعليًا. |
+| مفيش Git repo | **غلط دلوقتي.** الريبو شغال وعليه remote، والـ CI بيشتغل فعليًا |
+| مفيش Dockerfile / docker-compose | **غلط دلوقتي.** `docker-compose.yml` + `posflow-web/Dockerfile` + `src/PosFlow.Api/Dockerfile` |
+| مفيش `.env.example` | **غلط دلوقتي.** الملف موجود |
+| مفيش خطة backup | **جزئيًا.** السكريبت موجود (`deploy/backup-database.ps1`) — **بس مش متجدول**. ده لسه بند مفتوح حقيقي |
+| **مفيش Infrastructure as Code** | **لسه صح.** مفيش Terraform/Bicep/ARM في الريبو |
+| **CI بدون CD** | **لسه صح جزئيًا.** الـ CI بيبني الـ images وبينشرها على GHCR، بس مفيش حاجة بتاخدهم لسيرفر شغال |
+| مفيش environments متعددة | **لسه صح شكلًا، ومقصود.** فيه `appsettings.json` + `appsettings.Development.json` بس. كل تفريعات البيئة مبنية على `IsDevelopment()`، يعني Staging بياخد سلوك الإنتاج الآمن تلقائيًا. إضافة ملف Staging بقيم placeholder هتفتح مكان تتحط فيه أسرار بالغلط — القرار موثّق في §9 بند 9 |
 
----
+### المراقبة والـ Observability
 
-## 5. تعدد المستأجرين (Multi-tenancy) — نقطة مهمة جدًا هنا تحديدًا
-
-- البنية صح من ناحية الـ schema (كل entity فيه `TenantId`، وفيه composite indexes زي `(TenantId, Code)`).
-- لكن **العزل نفسه غير مُطبّق كطبقة مستقلة** — زي ما اتشرح فوق، هو مجرد `.Where()` متكرر يدويًا في كل service. ده تقني debt خطير: أي endpoint جديد يُضاف من غير الانتباه لده = تسريب بيانات.
-- **الحل الصح لمستوى enterprise:** EF Core Global Query Filters + integration test مخصص اسمه حاجة زي `TenantIsolationTests` يتأكد إن مفيش endpoint واحد بيرجع بيانات tenant تاني، حتى لو الـ service نسي الفلتر.
-
----
-
-## 6. الاختبارات (Testing)
-
-| موجود | ناقص |
+| البند الأصلي | الحالة الفعلية (اتفحصت 29 أغسطس) |
 |---|---|
-| Unit tests (Application layer) — 41 اختبار | ✅ **E2E tests** (Playwright) موجودة دلوقتي (تحديث 27 أغسطس) — `posflow-web/e2e/` (login + سيناريو بيع)، لسه قليلة عن قصد (أهم مسارين بس) |
-| Integration tests (API, WebApplicationFactory) — 32 اختبار | ✅ جزئي **Load/performance tests** — سكريبت k6 موجود، مش جزء من CI عن قصد (thresholds هتفلّت على runner مشترك) |
-| Frontend unit tests (guards, checkout logic) — 36 اختبار | ✅ **Security tests** موجودة (تحديث 27 أغسطس) — `TenantIsolationTests` + اختبارات HTTP فعلية لمحاولة وصول tenant تاني عبر الـ API |
-| CI يشغّل الكل عند كل push (فعليًا شغال، الريبو مربوط بـ GitHub) | **Mutation testing** أو أي قياس فعلي لجودة الاختبارات (مش بس coverage %) — لسه ناقص |
-| | **Contract tests** بين الـ frontend والـ backend — لسه ناقص |
-| | ✅ **(تحديث 28 أغسطس)** الثغرة الـ high-severity في `SQLitePCLRaw.lib.e_sqlite3` 2.1.11 (`GHSA-2m69-gcr7-jv3q`) اتقفلت — Pin على 2.1.13، و`dotnet list package --vulnerable` بقى نضيف في كل المشاريع. وخطوة الفحص في الـ CI بقت **بتوقف الـ build فعليًا** على High/Critical بدل ما تطبع بس |
+| مفيش structured logging | **غلط دلوقتي.** Serilog مركّب مع Console + File sinks و `UseSerilogRequestLogging()` |
+| `/health` بسيط | **غلط دلوقتي.** فيه `/health/live` (liveness نقي) و `/health/ready` (بيفحص الداتابيز كمان) |
+| مفيش metrics / APM | **جزئيًا.** `/metrics` (Prometheus) موجود. مفيش APM حقيقي ولا داشبورد مربوط |
+| **مفيش Correlation ID / request tracing** | **لسه صح.** مفيش أي correlation id بيربط طلب في الفرونت بلوج في الباك |
+| **مفيش alerting** | **لسه صح.** `/metrics` بيطلع أرقام، بس محدش بيتنبه لو الـ API وقعت |
+
+### التوسع والأداء
+
+| البند الأصلي | الحالة الفعلية (اتفحصت 29 أغسطس) |
+|---|---|
+| مفيش caching layer | **جزئيًا.** فيه `IMemoryCache` على التصنيفات (`CategoryService`). **مفيش Redis** — والكاش الحالي per-process، يعني غلط لو النظام اشتغل على أكتر من instance. Redis متفق عليه للمنتج ده ولسه متعملش |
+| Rate limiting على `auth` بس | **غلط دلوقتي.** فيه `GlobalLimiter` على كل الطلبات + سياسات خاصة بالـ auth. و`refresh`/`logout` اتشالوا من حد الـ brute-force لأنهم كانوا بيتقفلوا مع الاستخدام العادي |
+| Barcode lookup على الفرونت | **اتحل.** `GET /api/products/by-barcode/{barcode}` سيرفر-سايد |
+| **مفيش queue / background jobs** | **لسه صح.** مفيش Hangfire ولا أي hosted service — أي عملية طويلة لسه synchronous جوه الـ request |
+| مفيش load testing | **جزئيًا.** سكريبت k6 موجود في `tests/load/`. مش في الـ CI **عن قصد** (§9 بند 12) |
+
+### تعدد المستأجرين
+
+البند الأصلي كان بيقول إن العزل "مجرد `.Where()` متكرر يدويًا" وإن الحل الصح هو Global Query
+Filters + اختبار مخصص. **ده بالظبط اللي اتعمل**: الفلتر اليدوي فضل، واتضاف فوقه
+`HasQueryFilter`، ومعاهم `TenantIsolationTests` بيحاول يوصل لبيانات tenant تاني عبر HTTP فعلي.
+البند ده **مقفول**.
+
+### الاختبارات
+
+الأرقام الأصلية (41 unit / 32 integration / 36 frontend) بقت قديمة. الواقع المقاس في
+29 أغسطس:
+
+| السويت | العدد |
+|---|---|
+| `PosFlow.Application.Tests` (unit) | **41** |
+| `PosFlow.Api.Tests` (integration) | **62** |
+| Frontend (`ng test`) | **40** |
+| Playwright E2E | **4** (في 3 ملفات: `login`, `pos-checkout`, `dialog-a11y`) |
+
+`dotnet build` بيطلع **0 warnings**.
+
+**لسه ناقص**: Mutation testing، Contract tests بين الفرونت والباك، وفحص إتاحة تلقائي (axe) زي
+اللي في Subscription Tracker — الـ dialog اتصلح بس مفيش بوابة بتمنع رجوع المشكلة في صفحات تانية.
+
+### جاهزية المنتج
+
+كل بنود القسم ده اتقفلت (إيميل، PDF، ضرائب، عملاء، سجل مخزون، صلاحيات، عملات) ماعدا:
+- **صلاحيات مخصصة لكل مستخدم** — البنية جاهزة، بس لسه 3 أدوار ثابتة
+- **تحويل عملة حقيقي** — الجدول موجود، الأسعار يدوية، مفيش ربط بـ API خارجي
+- **أسعار مختلفة حسب الفرع** — مش موجود
+
+### التوثيق
+
+| البند الأصلي | الحالة الفعلية (اتفحصت 29 أغسطس) |
+|---|---|
+| مفيش ADRs | **غلط دلوقتي.** `docs/adr/` فيه 2 |
+| مفيش CONTRIBUTING.md | **غلط دلوقتي.** موجود |
+| مفيش Runbook | **غلط دلوقتي.** `deploy/README.md` |
+| مفيش API docs خارج Swagger | **لسه صح.** Swagger في Development بس، ومفيش بديل محمي لـ staging |
 
 ---
+## سجل تاريخي — 0.1 اللي اتعمل في 5 أغسطس (تحديث لاحق لنفس اليوم)
 
-## 7. جاهزية المنتج (Business Features)
-
-القايمة دي منقولة ومُرتّبة من `HANDOVER.md` §5 لأنها فعلاً فجوات حقيقية لأي POS enterprise:
-
-- **الإيميل مش شغال فعليًا بدون إعداد** — ✅ (تحديث 27 أغسطس) الكود جاهز (`SmtpEmailSender`)، بيشتغل تلقائيًا لو `Smtp:Host` متظبط؛ من غيره بيرجع لـ `LoggingEmailSender` (يكتب في الـ log بس).
-- **مفيش طباعة فواتير / PDF export.** ✅ اتحل (تحديث 27 أغسطس) — `GET /api/orders/{id}/receipt-pdf` عبر QuestPDF، زرار تحميل في شاشة الـ POS.
-- **مفيش نظام خصومات على مستوى الفاتورة ولا إعدادات ضرائب** — الخصم لسه على مستوى السطر بس (لسه صح). الضريبة ✅ اتحلت من قبل (`Tenant.TaxRatePercent` بيتطبق فعليًا في الـ checkout).
-- **مفيش سجلات عملاء (customers)** — ✅ اتحل من قبل — CRUD كامل + ربط اختياري بالفاتورة + نقاط ولاء بسيطة.
-- **مفيش سجل تدقيق على المخزون** (Stock Audit Trail) — ✅ اتحل (تحديث 27 أغسطس) — جدول `StockMovement` append-only (Sale/OrderVoided/ManualAdjustment/StockReceived) بيتسجل تلقائي من الـ checkout والـ void وتعديل المنتج اليدوي، ومتاح عبر `GET /api/products/{id}/stock-movements`.
-- **مفيش أدوار صلاحيات دقيقة (granular permissions)** — ✅ جزئي اتحل من قبل — فيه كتالوج صلاحيات (`Permissions`) وpolicy-based authorization بدل `[Authorize(Roles=...)]`، لكن لسه بس 3 أدوار ثابتة (Admin/Manager/Cashier) كل واحد بمجموعة صلاحيات جاهزة — مفيش تخصيص صلاحيات لكل مستخدم لوحده.
-- **مفيش تعدد عملات** أو دعم أسعار مختلفة حسب الفرع. ✅ جزئي اتحل (تحديث 27 أغسطس) — جدول `ExchangeRate` يدوي لكل tenant + endpoint `/convert`، لكنه **تحويل عرض فقط بأسعار الأدمن يدخلها بنفسه، مفيش ربط بـ API أسعار صرف خارجي**، ومفيش أسعار مختلفة حسب الفرع.
-
----
-
-## 8. التوثيق (Documentation)
-
-- `HANDOVER.md` قوي كملخص عام، لكن مفيش:
-  - **API documentation** خارج الـ Swagger نفسه (اللي أصلاً متاح في Development بس — منطقي أمنيًا، بس محتاج بديل زي Swagger محمي بـ auth في staging على الأقل).
-  - **Architecture Decision Records (ADRs)** — ليه اتاخد قرارات معينة (مثلاً: ليه TenantId مش global filter؟).
-  - **Runbook** للعمليات (إيه اللي تعمله لو الداتابيز وقعت، لو فيه spike في الطلبات، إلخ).
-  - **دليل مساهمة (CONTRIBUTING.md)** وقواعد coding standards موثقة (فيه `.editorconfig` بس مفيش شرح مكتوب).
-
----
-
-## 0.1 اللي اتعمل فعليًا (تحديث لاحق لنفس اليوم)
+> الأقسام دي (0.1 و0.2) **سجل تاريخي** بيوثّق إيه اتعمل وإمتى. الحالة الحالية المتحقَّق منها في
+> القسم "1-8" فوق — لو فيه تعارض، اللي فوق هو الصح.
 
 ✅ = خلص وموجود في الكود دلوقتي. ❌ = لسه ناقص (سواء لأنه محتاج قرار منك، أو حساب/خدمة خارجية، أو مجهود أكبر من جلسة واحدة).
 
@@ -177,7 +172,7 @@
 
 **خلاصة النهائية:** كل بند كان ممكن يتنفذ بكود بس (من غير حساب سحابي فعلي أو قرار استضافة) **اتنفذ فعليًا وبيشتغل ومعدي اختبارات حقيقية** — permissions، customers، tax/currency، 2FA، caching، E2E test infra، CD للـ images، secrets manager wiring، backup script. الحاجات المتبقية (CD لسيرفر فعلي، تفعيل Key Vault فعلي، جدولة الـ backup) محتاجة منك تحديد الاستضافة/الحساب السحابي — مش حاجة أقدر أقررها نيابة عنك.
 
-## 0.2 إضافات مرحلة أغسطس التانية (14-26 أغسطس 2026)، مش موثّقة في الجداول الأصلية فوق
+## سجل تاريخي — 0.2 إضافات مرحلة أغسطس التانية (14-26 أغسطس 2026)
 
 بنود اتضافت بعد أول مراجعة فعلية لهذا الملف، بالكامل موجودة في الكود دلوقتي (اتحقق منها بقراءة الكنترولرز والـ Program.cs مباشرة):
 
@@ -210,6 +205,12 @@
 5. **Alerting فعلي** — `/metrics` موجود لكن مفيش حد بيتنبه فورًا لو حصل spike في الأخطاء أو الـ API وقعت.
 6. **Redis بدل IMemoryCache** لو النظام هيشتغل على أكتر من instance واحدة (الكاش الحالي على التصنيفات بس، وهيكون غلط لو multi-instance).
 7. **تفعيل Azure Key Vault فعليًا** (الكود جاهز، محتاج حساب Azure وتحديد `KeyVault:Uri`).
+7أ. **Correlation ID** — لو حصل خطأ، مفيش دلوقتي أي مُعرّف موحّد يربط الطلب في الفرونت باللوج في
+   الباك. Serilog مركّب، فده إضافة صغيرة (middleware + enricher) بعائد كبير وقت التشخيص.
+   *(اتفحص في 29 أغسطس: مفيش أي correlation id في الكود.)*
+7ب. **Queue / background jobs** — أي عملية طويلة لسه بتتنفذ synchronous جوه الـ request. مفيش
+   Hangfire ولا أي hosted service. مش مشكلة دلوقتي بالحِمل الحالي، بس بتبقى مشكلة أول ما يبقى فيه
+   تصدير تقارير كبيرة أو إرسال إيميلات مجمّعة.
 8. **تحويل عملة حقيقي** لو هتحتاج ربط بسعر صرف فعلي بدل الإدخال اليدوي — الجدول موجود بس مفيش API خارجي مربوط.
 9. ~~**`appsettings.Staging.json`** منفصل بوضوح~~ — ❌ **اتراجعت واتقرر إنها مش مطلوبة (28 أغسطس)**: كل تفريعات البيئة في `Program.cs` مبنية على `IsDevelopment()` وبس، يعني Staging بياخد سلوك الإنتاج الآمن تلقائيًا (Swagger مقفول، HSTS شغال) من غير أي ملف. والقيم الحقيقية أصلاً بتيجي من environment variables / secrets manager بالتصميم (`appsettings.json` بيفشل مقفول عن قصد). إضافة ملف Staging بقيم placeholder هتفتح مكان يتحط فيه secrets بالغلط وتناقض التصميم ده — لو احتجت بيئة staging، ظبّطها بنفس متغيرات البيئة بقيم مختلفة.
 
