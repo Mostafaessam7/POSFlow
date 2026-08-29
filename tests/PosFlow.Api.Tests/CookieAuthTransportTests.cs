@@ -155,6 +155,52 @@ public sealed class CookieAuthTransportTests : IDisposable
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>Pulls the "name=value" part out of a Set-Cookie header.</summary>
+    private static string? CookiePair(HttpResponseMessage response, string name) =>
+        SetCookies(response)
+            .FirstOrDefault(c => c.StartsWith(name + "=", StringComparison.Ordinal))
+            ?.Split(';')[0];
+
+    [Fact]
+    public async Task Refresh_succeeds_with_an_empty_body_when_the_cookie_carries_the_token()
+    {
+        // The shape a browser actually sends. The SPA posts `{}` on purpose - the token is in the
+        // HttpOnly cookie, and putting it in the body is the exact thing cookie transport avoids.
+        //
+        // Every other refresh test here sends `refreshToken: ""` - an empty string, so the field is
+        // *present*. That is what let this break go unnoticed: a present-but-empty field satisfies
+        // ASP.NET Core's implicit-required rule for non-nullable reference types, while an absent
+        // one does not. The suite was green against a shape no real client sends, and the browser
+        // got "The RefreshToken field is required." on every page load, which logged the user out.
+        var login = await LoginAsync(cookieTransport: true);
+
+        if (login.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            Assert.Fail("Login failed, so the assertions below never ran. Fix the seeded admin rather than letting this test pass silently.");
+        }
+
+        var refreshCookie = CookiePair(login, "posflow_rt");
+        var csrfCookie = CookiePair(login, "XSRF-TOKEN");
+
+        Assert.NotNull(refreshCookie);
+        Assert.NotNull(csrfCookie);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh")
+        {
+            Content = JsonContent.Create(new { })
+        };
+        request.Headers.Add("Cookie", $"{refreshCookie}; {csrfCookie}");
+        request.Headers.Add("X-XSRF-TOKEN", csrfCookie.Split('=', 2)[1]);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // And the rotated token still must not come back in the body.
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("\"refreshToken\":\"", body, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task Refresh_without_any_token_is_a_clean_400_not_a_500()
     {

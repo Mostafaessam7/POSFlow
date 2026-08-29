@@ -258,6 +258,13 @@ public sealed class AuthService(
         RefreshTokenRequest request,
         CancellationToken cancellationToken = default)
     {
+        // No credential supplied at all. The API layer resolves cookie-or-body before calling here,
+        // so this is the "neither was present" case and is the same outcome as an unknown token.
+        if (string.IsNullOrEmpty(request.RefreshToken))
+        {
+            return null;
+        }
+
         var tokenHash = HashToken(request.RefreshToken);
 
         var existingToken = await _dbContext.RefreshTokens
@@ -294,6 +301,13 @@ public sealed class AuthService(
         RefreshTokenRequest request,
         CancellationToken cancellationToken = default)
     {
+        // Nothing to revoke without a credential; treat it as a no-op rather than an error, so a
+        // logout with an already-cleared cookie still succeeds instead of failing the sign-out.
+        if (string.IsNullOrEmpty(request.RefreshToken))
+        {
+            return;
+        }
+
         var tokenHash = HashToken(request.RefreshToken);
 
         var existingToken = await _dbContext.RefreshTokens
