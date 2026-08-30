@@ -103,9 +103,19 @@ builder.Host.UseSerilog((context, services, loggerConfig) => loggerConfig
     .Enrich.FromLogContext()
     .Enrich.WithMachineName()
     .Enrich.WithEnvironmentName()
-    .WriteTo.Console()
+    // Both sinks name {CorrelationId} explicitly. Serilog's default output template renders only
+    // timestamp, level and message, so an enriched property is attached to the event and then
+    // silently dropped on the way out - the middleware, the enricher and the log all look correct
+    // while the id appears nowhere. Verified by making a request with a known id and grepping the
+    // log for it, which is the only way this particular failure shows up.
+    //
+    // The (none) fallback covers log lines written outside a request, where there is no id to
+    // attach: startup, shutdown and background work.
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{CorrelationId}] {Message:lj}{NewLine}{Exception}")
     .WriteTo.File(
         "logs/posflow-.log",
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] [{CorrelationId}] {Message:lj}{NewLine}{Exception}",
         rollingInterval: RollingInterval.Day,
         retainedFileCountLimit: 30));
 
@@ -529,6 +539,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Ahead of request logging so the correlation id is already on the Serilog context when the
+// request-completed line is written - otherwise the one line most likely to be searched for is
+// the only one without an id on it.
+app.UseMiddleware<PosFlow.Api.Middleware.CorrelationIdMiddleware>();
 
 // Request logging goes first so it observes the FINAL response status,
 // including ones rewritten by the exception handler below (otherwise
