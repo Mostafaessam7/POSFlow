@@ -122,6 +122,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # GHCR rejects any tag whose repository name is not lowercase, and
+      # github.repository_owner preserves the account's actual casing
+      # ("Mostafaessam7"). Every push failed with:
+      #   invalid tag "ghcr.io/Mostafaessam7/posflow-api:latest":
+      #   repository name must be lowercase
+      # There is no built-in lowercase filter in workflow expressions, so it is
+      # done here once and reused by both image builds below.
+      - name: Lowercase the image owner
+        run: echo "IMAGE_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
       - name: Build and push API image
         uses: docker/build-push-action@v6
         with:
@@ -129,8 +139,8 @@ jobs:
           file: src/PosFlow.Api/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/posflow-api:latest
-            ghcr.io/${{ github.repository_owner }}/posflow-api:${{ github.sha }}
+            ghcr.io/${{ env.IMAGE_OWNER }}/posflow-api:latest
+            ghcr.io/${{ env.IMAGE_OWNER }}/posflow-api:${{ github.sha }}
 
       - name: Build and push web image
         uses: docker/build-push-action@v6
@@ -138,8 +148,8 @@ jobs:
           context: ./posflow-web
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/posflow-web:latest
-            ghcr.io/${{ github.repository_owner }}/posflow-web:${{ github.sha }}
+            ghcr.io/${{ env.IMAGE_OWNER }}/posflow-web:latest
+            ghcr.io/${{ env.IMAGE_OWNER }}/posflow-web:${{ github.sha }}
 
   # No deploy-to-a-running-server job yet - that needs a real hosting
   # target chosen first (Azure App Service, ECS, a VM, k8s, ...). See
