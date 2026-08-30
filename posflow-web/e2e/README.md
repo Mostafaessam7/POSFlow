@@ -12,8 +12,13 @@ You need SQL Server reachable (a local instance, LocalDB, or
 ```bash
 # Terminal 1 - backend, pointed at your SQL Server, auto-migrate +
 # demo-seed on (Development environment does both by default)
+#
+# RateLimiting__AuthPermitLimit is not optional for a full run. Every test signs in and they all
+# come from one IP, so the default ceiling of 5/min is spent about six tests in; the next sign-in
+# gets a 429 and the test fails looking exactly like a broken login. The default stays 5 so the
+# integration suite keeps testing the real limit (see AuthRateLimitTests).
 cd src/PosFlow.Api
-dotnet run
+RateLimiting__AuthPermitLimit=100 dotnet run
 
 # Terminal 2 - frontend dev server
 cd posflow-web
