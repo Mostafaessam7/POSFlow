@@ -108,3 +108,20 @@
 | **مفيش إعادة كتابة لكل الـ controllers بـ ProblemDetails** | 31 معالج أخطاء في الفرونت اند بيتجاهلوا جسم الرد أصلًا، فالمكسب صفر مقابل تغيير واسع في كود شغال |
 | **دمج PosFlow مع POS** | قرار صريح: منتجين منفصلين بجمهور وخارطة طريق مختلفين |
 | **مكتبة `@angular/material`** | اتاخد الـ CDK بس (a11y primitives) لأنه بيصلّح عيب متقاس من غير أي تغيير بصري. استبدال مكوّنات شغالة ومتربطة بالـ tokens مكسبه مش واضح |
+
+---
+
+## تحديث 2026-08-30 — Redis و Key Vault و App Insights و Sentry
+
+| البند | الحالة |
+|---|---|
+| **Redis** | ✅ اتعمل. `CategoryService` بقى على `IDistributedCache`: Redis لو `ConnectionStrings:Redis` متظبط، وin-memory لو مش متظبط |
+| **Azure Key Vault** | ✅ متوصّل. `KeyVault__Uri` بيفعّله؛ من غيره مفيش حاجة بتتسجّل. فوق `SecretsValidator` عشان القيم اللي جاية من الـ vault تتحسب متظبطة |
+| **Application Insights** | ✅ متوصّل. `APPLICATIONINSIGHTS_CONNECTION_STRING` بيفعّله. مش بديل لـ Prometheus ولا Serilog — ده الـ APM اللي الاتنين دول مش بيغطوه |
+| **Sentry (فرونت اند)** | ✅ متوصّل. `environment.sentryDsn` بيفعّله. بيتحمّل ديناميك، فمش بيزوّد الـ initial bundle لو مش متظبط |
+
+**اللي باقي عليك**: تحط القيم دي فعليًا. الأربعة كلهم **خاملين** لحد ما تتظبط، فمفيش أي تغيير في
+السلوك الحالي من غيرها.
+
+**لسه مفتوح وشغل كود**: Correlation ID، queue/background jobs، Infrastructure as Code، alerting
+مربوط بالـ `/metrics`، وفحص إتاحة تلقائي (axe).
