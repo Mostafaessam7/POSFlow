@@ -47,6 +47,15 @@ jobs:
           ASPNETCORE_ENVIRONMENT: Development
           ASPNETCORE_URLS: http://localhost:5000
           ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=PosFlowE2E;User Id=sa;Password=E2E_Test_Pw_123!;TrustServerCertificate=True"
+          # Every browser test signs in, and they all come from one IP, so the production ceiling
+          # of 5/min is spent about six tests in. The next sign-in returns 429 and the test fails
+          # looking exactly like a broken login -- which is what happened when the accessibility
+          # specs pushed the count past five.
+          #
+          # Set here rather than in appsettings or keyed off IsDevelopment, so the default stays 5
+          # everywhere else. The integration suite runs in Development too, and AuthRateLimitTests
+          # exists to prove login is still throttled -- it has to keep seeing the real limit.
+          RateLimiting__AuthPermitLimit: "100"
         run: |
           dotnet run &
           echo "Waiting for API to come up..."

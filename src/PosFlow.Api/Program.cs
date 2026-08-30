@@ -122,13 +122,31 @@ builder.Services.AddRateLimiter(options =>
     // Blunts brute-force login/password-reset attempts: 5 attempts
     // per minute, keyed per client IP (not per-account, since the
     // account may not exist yet - this is deliberately IP-based).
+    //
+    // The ceiling is configurable, and it defaults to the strict value. Only something that sets
+    // RateLimiting:AuthPermitLimit explicitly gets anything looser - see .github/workflows/e2e.yml,
+    // which is the one place that does.
+    //
+    // Why it needs to be adjustable at all: every browser test signs in, and they all arrive from
+    // one IP, so five is spent about six tests into the E2E suite. The next sign-in gets a 429 and
+    // fails looking exactly like a broken login. That happened when the accessibility specs were
+    // added and pushed the count past five - an hour to diagnose, and the tempting "fix" is to
+    // delete whichever test tipped it over.
+    //
+    // Why configuration rather than `IsDevelopment()`, which was the first attempt: the
+    // integration-test factory runs in Development, so keying off the environment silently raised
+    // the ceiling underneath AuthRateLimitTests too. That suite exists to prove login is still
+    // throttled, and it went red immediately - correctly. Defaulting to 5 means the tests keep
+    // exercising the real limit and only an explicit opt-in relaxes it.
+    var authPermitLimit = builder.Configuration.GetValue("RateLimiting:AuthPermitLimit", 5);
+
     options.AddPolicy(AuthRateLimitPolicy, httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString()
                 ?? "unknown",
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 5,
+                PermitLimit = authPermitLimit,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
