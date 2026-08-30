@@ -6,5 +6,9 @@ export const environment = {
   // (see proxy.conf.json). Set to 'http://localhost:5000' (or
   // whatever port the API runs on) if you're calling it directly
   // without a dev-server proxy.
-  apiBaseUrl: ''
+  apiBaseUrl: '',
+
+  // Fill in the project DSN to enable Sentry error reporting. Empty means Sentry never
+  // initializes and nothing leaves the browser -- see main.ts.
+  sentryDsn: ''
 };
