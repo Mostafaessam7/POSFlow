@@ -484,6 +484,14 @@ else
     builder.Services.AddScoped<IEmailSender, LoggingEmailSender>();
 }
 
+// Email delivery moved off the request thread. Registered as one singleton exposed under two
+// types: the hosted service reads the channel, request handlers write to it, and both need the
+// same instance -- resolving IBackgroundEmailQueue separately would hand writers a different
+// channel from the one being drained, and every queued email would sit unread forever.
+builder.Services.AddSingleton<BackgroundEmailQueue>();
+builder.Services.AddSingleton<IBackgroundEmailQueue>(sp => sp.GetRequiredService<BackgroundEmailQueue>());
+builder.Services.AddHostedService<BackgroundEmailSenderService>();
+
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>(
         "database",
