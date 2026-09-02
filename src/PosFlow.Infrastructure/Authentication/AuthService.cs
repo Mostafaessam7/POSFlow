@@ -20,6 +20,7 @@ public sealed class AuthService(
     IPasswordHasher<AppUser> passwordHasher,
     IOptions<JwtOptions> jwtOptions,
     IEmailSender emailSender,
+    IBackgroundEmailQueue emailQueue,
     IConfiguration configuration)
     : IAuthService
 {
@@ -32,6 +33,7 @@ public sealed class AuthService(
     private readonly IPasswordHasher<AppUser> _passwordHasher = passwordHasher;
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
     private readonly IEmailSender _emailSender = emailSender;
+    private readonly IBackgroundEmailQueue _emailQueue = emailQueue;
     private readonly IConfiguration _configuration = configuration;
 
     public async Task<LoginResponse?> LoginAsync(
@@ -367,14 +369,23 @@ public sealed class AuthService(
         var resetLink =
             $"{frontendBaseUrl}/reset-password?token={Uri.EscapeDataString(rawToken)}";
 
-        await _emailSender.SendAsync(
+        // Queued rather than awaited, and the reason is the no-op above rather than latency.
+        //
+        // That early return exists so an unknown username produces the same response as a known
+        // one. Sending here inline defeated it: the unknown path returned after a single query
+        // while this path opened an SMTP connection and waited. A caller timing the two could tell
+        // registered usernames from unregistered ones, which is exactly what the endpoint is
+        // written to prevent.
+        //
+        // This does not make the paths constant-time — a token row is still written above — but it
+        // removes the multi-second term, leaving a difference on the order of a database insert.
+        _emailQueue.Enqueue(new QueuedEmail(
             user.Email,
             "إعادة تعيين كلمة المرور - PosFlow",
             $"مرحبًا {user.DisplayName}،\n\n" +
             $"اضغط على الرابط ده لإعادة تعيين كلمة المرور (صالح لمدة {PasswordResetTokenExpirationMinutes} دقيقة):\n" +
             $"{resetLink}\n\n" +
-            "لو ما طلبتش ده، تجاهل الإيميل ده.",
-            cancellationToken);
+            "لو ما طلبتش ده، تجاهل الإيميل ده."));
     }
 
     public async Task ResetPasswordAsync(

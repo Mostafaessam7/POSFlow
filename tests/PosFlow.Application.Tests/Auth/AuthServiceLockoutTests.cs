@@ -62,6 +62,7 @@ public sealed class AuthServiceLockoutTests
             passwordHasher,
             jwtOptions,
             emailSender,
+            new NoOpEmailQueue(),
             configuration);
 
         return (service, dbContext, user);
@@ -108,6 +109,11 @@ public sealed class AuthServiceLockoutTests
         var reloaded = await dbContext.Users.SingleAsync(x => x.Id == user.Id);
         Assert.Equal(0, reloaded.FailedLoginAttempts);
         Assert.Null(reloaded.LockoutEndUtc);
+    }
+
+    private sealed class NoOpEmailQueue : IBackgroundEmailQueue
+    {
+        public void Enqueue(QueuedEmail email) { }
     }
 
     private sealed class NoOpEmailSender : IEmailSender
