@@ -133,7 +133,7 @@ jobs:
         run: echo "IMAGE_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
 
       - name: Build and push API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: src/PosFlow.Api/Dockerfile
@@ -143,7 +143,7 @@ jobs:
             ghcr.io/${{ env.IMAGE_OWNER }}/posflow-api:${{ github.sha }}
 
       - name: Build and push web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./posflow-web
           push: true
