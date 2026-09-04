@@ -15,7 +15,7 @@
          2.1.11 transitively, which carries a high-severity advisory
          (GHSA-2m69-gcr7-jv3q). Drop this pin once the EF Sqlite provider
          resolves a patched version on its own. -->
-    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.13" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
