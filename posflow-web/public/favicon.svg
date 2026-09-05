@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="PosFlow">
+  <!--
+    A receipt with a torn foot, which is the one object every till has in common and reads at
+    16px where a wordmark or a full register illustration would not.
+
+    Colours are the product's own Enterprise Blue accent rather than the shared Mecodex mark:
+    RealEstateCRM points at mecodex-favicon.svg, but that is the studio's identity, and in a
+    browser with several of these products open the tabs need to be told apart. Both light and
+    dark accents are declared so the glyph holds up against either tab-strip background.
+  -->
+  <style>
+    .paper { fill: #ffffff; }
+    .ink   { fill: #3070dd; }
+    .line  { stroke: #3070dd; stroke-width: 2.2; stroke-linecap: round; }
+    @media (prefers-color-scheme: dark) {
+      .paper { fill: #0e1420; }
+      .ink   { fill: #5189ec; }
+      .line  { stroke: #5189ec; }
+    }
+  </style>
+
+  <!-- Receipt body: square shoulders, torn zig-zag along the bottom edge. -->
+  <path class="ink"
+        d="M5 3h22v23l-2.75 2.5L21.5 26l-2.75 2.5L16 26l-2.75 2.5L10.5 26l-2.75 2.5L5 26z" />
+  <path class="paper"
+        d="M8 6h16v18.6l-1.375 1.25L19.875 24l-2.75 2.5L14.375 24l-2.75 2.5L8.875 24 8 24.8z" />
+
+  <!-- Two ruled lines and a total, the minimum that reads as a printed receipt. -->
+  <line class="line" x1="11" y1="10.5" x2="21" y2="10.5" />
+  <line class="line" x1="11" y1="14.5" x2="21" y2="14.5" />
+  <line class="line" x1="11" y1="18.5" x2="17" y2="18.5" />
+</svg>

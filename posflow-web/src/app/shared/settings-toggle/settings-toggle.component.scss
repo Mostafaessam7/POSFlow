@@ -1,7 +1,12 @@
 :host {
   position: fixed;
   top: 16px;
-  left: 16px;
+  // Logical rather than a physical `left`, so the control always sits at the end of the reading
+  // direction: the left in this RTL app, the right once it is switched to English. That matters
+  // because the page heading bands reserve room with padding-inline-end to stay clear of it (see
+  // styles.scss). With `left` the reserved side and the occupied side would swap apart the moment
+  // somebody used the language toggle, and the headings would slide straight back underneath it.
+  inset-inline-end: 16px;
   z-index: 1000;
 }
 

@@ -3,9 +3,15 @@
   "configurations": [
     {
       "name": "posflow-web",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "posflow-web", "start"],
+      "runtimeExecutable": "D:\\Projects\\4-PosFlow\\.claude\\serve-web.cmd",
+      "runtimeArgs": [],
       "port": 4200
+    },
+    {
+      "name": "probe",
+      "runtimeExecutable": "D:\\Projects\\4-PosFlow\\.claude\\probe.cmd",
+      "runtimeArgs": [],
+      "port": 4999
     }
   ]
 }

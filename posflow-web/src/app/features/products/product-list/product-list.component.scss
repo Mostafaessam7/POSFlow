@@ -347,3 +347,20 @@ button:disabled {
     white-space: nowrap;
   }
 }
+
+// app-settings-toggle is position: fixed, so it takes no layout space and this band's heading
+// renders underneath it. On a wide screen that is harmless -- heading and toggle sit at opposite
+// ends. Below ~900px the heading grows to the full width, slides under the toggle and becomes
+// unreadable; the POS register title was fully obscured at 375px.
+//
+// Reserving the strip on the inline-end keeps the heading clear without moving anything
+// vertically. It lives here rather than in styles.scss because Angular's emulated encapsulation
+// gives component rules an extra attribute selector, so a global  loses the specificity
+// contest against the padding declared above and silently does nothing.
+//
+// 16px inset + 80px control + 8px gap.
+@media (max-width: 900px) {
+  .page-header {
+    padding-inline-end: 104px;
+  }
+}
